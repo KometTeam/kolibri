@@ -10,7 +10,10 @@ use std::sync::Arc;
 use thiserror::Error;
 
 pub use http::HttpResponse;
-pub use upload::{content_type_for_filename, upload_file, upload_photo, upload_video};
+pub use upload::{
+    content_type_for_filename, upload_file, upload_file_path, upload_photo, upload_photo_path,
+    upload_video, upload_video_path,
+};
 
 /// `(bytes_sent, total_bytes)`
 pub type ProgressFn = Arc<dyn Fn(u64, u64) + Send + Sync>;

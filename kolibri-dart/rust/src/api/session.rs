@@ -404,6 +404,94 @@ impl KolibriSession {
             }));
     }
 
+    /// like [`Self::upload_file`], but streams the body off disk from `path`
+    /// (never loads the whole file into memory).
+    pub fn upload_file_path(
+        &self,
+        url: String,
+        path: String,
+        filename: String,
+        user_agent: Option<String>,
+        sink: StreamSink<UploadEvent>,
+    ) {
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
+        self.rt
+            .spawn(drive_upload(sink, move |progress| async move {
+                kolibri_net::media::upload_file_path(
+                    &url,
+                    &path,
+                    &filename,
+                    false,
+                    proxy.as_ref(),
+                    Some(progress),
+                    &ua,
+                )
+                .await
+                .map(|r| (r.status, r.body))
+                .map_err(|e| e.to_string())
+            }));
+    }
+
+    /// like [`Self::upload_photo`], but streams the file part off disk from `path`.
+    pub fn upload_photo_path(
+        &self,
+        url: String,
+        path: String,
+        filename: String,
+        user_agent: Option<String>,
+        sink: StreamSink<UploadEvent>,
+    ) {
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
+        self.rt
+            .spawn(drive_upload(sink, move |progress| async move {
+                kolibri_net::media::upload_photo_path(
+                    &url,
+                    &path,
+                    &filename,
+                    false,
+                    proxy.as_ref(),
+                    Some(progress),
+                    &ua,
+                )
+                .await
+                .map(|r| (r.status, r.body))
+                .map_err(|e| e.to_string())
+            }));
+    }
+
+    /// like [`Self::upload_video`], but reads each chunk off disk from `path` on
+    /// demand (only one chunk per worker in memory).
+    pub fn upload_video_path(
+        &self,
+        url: String,
+        path: String,
+        chunk_size: u32,
+        concurrency: u32,
+        sink: StreamSink<UploadEvent>,
+    ) {
+        let proxy = self.proxy.clone();
+        self.rt
+            .spawn(drive_upload(sink, move |progress| async move {
+                match kolibri_net::media::upload_video_path(
+                    &url,
+                    &path,
+                    chunk_size as usize,
+                    concurrency as usize,
+                    false,
+                    proxy,
+                    Some(progress),
+                )
+                .await
+                {
+                    Ok(true) => Ok((200, Vec::new())),
+                    Ok(false) => Err("upload failed".to_string()),
+                    Err(e) => Err(e.to_string()),
+                }
+            }));
+    }
+
     /// server pushes; yields until the session is dropped
     pub fn pushes(&self, sink: StreamSink<PushEvent>) {
         let mut rx = self.inner.subscribe();

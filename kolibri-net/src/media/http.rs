@@ -81,6 +81,118 @@ pub(crate) async fn request(
     }
 }
 
+// like [`request`], but the body is streamed: `prefix` bytes, then `body_len`
+// bytes pulled from `reader` (e.g. a file, off disk — never fully in RAM), then
+// `suffix` bytes. Caller sets Content-Length to prefix+body_len+suffix.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn request_streaming<R: AsyncReadExt + Unpin>(
+    url: &ParsedUrl,
+    method: &str,
+    headers: &[(&str, String)],
+    prefix: &[u8],
+    reader: R,
+    body_len: u64,
+    suffix: &[u8],
+    insecure: bool,
+    proxy: Option<&ProxyConfig>,
+    timeout: Duration,
+    progress: Option<&ProgressFn>,
+    progress_total: u64,
+) -> Result<HttpResponse, MediaError> {
+    let head = build_head(method, &url.path, headers);
+    let tcp = connect_tcp(&url.host, url.port, timeout, proxy).await?;
+
+    if url.https {
+        let connector = build_connector(insecure).map_err(|e| MediaError::Tls(e.to_string()))?;
+        let name = rustls::pki_types::ServerName::try_from(url.host.clone())
+            .map_err(|e| MediaError::Tls(e.to_string()))?;
+        let tls = connector
+            .connect(name, tcp)
+            .await
+            .map_err(|e| MediaError::Tls(e.to_string()))?;
+        exchange_streaming(
+            tls,
+            &head,
+            prefix,
+            reader,
+            body_len,
+            suffix,
+            timeout,
+            progress,
+            progress_total,
+        )
+        .await
+    } else {
+        exchange_streaming(
+            tcp,
+            &head,
+            prefix,
+            reader,
+            body_len,
+            suffix,
+            timeout,
+            progress,
+            progress_total,
+        )
+        .await
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn exchange_streaming<S, R>(
+    mut stream: S,
+    head: &[u8],
+    prefix: &[u8],
+    mut reader: R,
+    body_len: u64,
+    suffix: &[u8],
+    timeout: Duration,
+    progress: Option<&ProgressFn>,
+    progress_total: u64,
+) -> Result<HttpResponse, MediaError>
+where
+    S: AsyncReadExt + AsyncWriteExt + Unpin,
+    R: AsyncReadExt + Unpin,
+{
+    stream.write_all(head).await?;
+
+    let mut sent = 0u64;
+    let report = |sent: u64| {
+        if let Some(cb) = progress {
+            cb(sent, progress_total.max(sent));
+        }
+    };
+
+    if !prefix.is_empty() {
+        stream.write_all(prefix).await?;
+        sent += prefix.len() as u64;
+        report(sent);
+    }
+
+    let mut remaining = body_len;
+    let mut buf = vec![0u8; 64 * 1024];
+    while remaining > 0 {
+        let want = (buf.len() as u64).min(remaining) as usize;
+        let n = reader.read(&mut buf[..want]).await?;
+        if n == 0 {
+            break;
+        }
+        stream.write_all(&buf[..n]).await?;
+        sent += n as u64;
+        remaining -= n as u64;
+        report(sent);
+    }
+
+    if !suffix.is_empty() {
+        stream.write_all(suffix).await?;
+        sent += suffix.len() as u64;
+        report(sent);
+    }
+    stream.flush().await?;
+
+    read_response(&mut stream, timeout).await
+}
+
 fn build_head(method: &str, path: &str, headers: &[(&str, String)]) -> Vec<u8> {
     let mut s = format!("{method} {path} HTTP/1.1\r\n");
     for (k, v) in headers {

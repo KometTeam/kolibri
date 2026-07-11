@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -773469170;
+  int get rustContentHash => 389144558;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -164,6 +164,13 @@ abstract class RustLibApi extends BaseApi {
       required String filename,
       String? userAgent});
 
+  Stream<UploadEvent> crateApiSessionKolibriSessionUploadFilePath(
+      {required KolibriSession that,
+      required String url,
+      required String path,
+      required String filename,
+      String? userAgent});
+
   Stream<UploadEvent> crateApiSessionKolibriSessionUploadPhoto(
       {required KolibriSession that,
       required String url,
@@ -171,10 +178,24 @@ abstract class RustLibApi extends BaseApi {
       required String filename,
       String? userAgent});
 
+  Stream<UploadEvent> crateApiSessionKolibriSessionUploadPhotoPath(
+      {required KolibriSession that,
+      required String url,
+      required String path,
+      required String filename,
+      String? userAgent});
+
   Stream<UploadEvent> crateApiSessionKolibriSessionUploadVideo(
       {required KolibriSession that,
       required String url,
       required List<int> data,
+      required int chunkSize,
+      required int concurrency});
+
+  Stream<UploadEvent> crateApiSessionKolibriSessionUploadVideoPath(
+      {required KolibriSession that,
+      required String url,
+      required String path,
       required int chunkSize,
       required int concurrency});
 
@@ -847,6 +868,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<UploadEvent> crateApiSessionKolibriSessionUploadFilePath(
+      {required KolibriSession that,
+      required String url,
+      required String path,
+      required String filename,
+      String? userAgent}) {
+    final sink = RustStreamSink<UploadEvent>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+            that, serializer);
+        sse_encode_String(url, serializer);
+        sse_encode_String(path, serializer);
+        sse_encode_String(filename, serializer);
+        sse_encode_opt_String(userAgent, serializer);
+        sse_encode_StreamSink_upload_event_Sse(sink, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 22, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSessionKolibriSessionUploadFilePathConstMeta,
+      argValues: [that, url, path, filename, userAgent, sink],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiSessionKolibriSessionUploadFilePathConstMeta =>
+      const TaskConstMeta(
+        debugName: "KolibriSession_upload_file_path",
+        argNames: ["that", "url", "path", "filename", "userAgent", "sink"],
+      );
+
+  @override
   Stream<UploadEvent> crateApiSessionKolibriSessionUploadPhoto(
       {required KolibriSession that,
       required String url,
@@ -865,7 +924,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_opt_String(userAgent, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 22, port: port_);
+            funcId: 23, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -882,6 +941,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "KolibriSession_upload_photo",
         argNames: ["that", "url", "data", "filename", "userAgent", "sink"],
+      );
+
+  @override
+  Stream<UploadEvent> crateApiSessionKolibriSessionUploadPhotoPath(
+      {required KolibriSession that,
+      required String url,
+      required String path,
+      required String filename,
+      String? userAgent}) {
+    final sink = RustStreamSink<UploadEvent>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+            that, serializer);
+        sse_encode_String(url, serializer);
+        sse_encode_String(path, serializer);
+        sse_encode_String(filename, serializer);
+        sse_encode_opt_String(userAgent, serializer);
+        sse_encode_StreamSink_upload_event_Sse(sink, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 24, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSessionKolibriSessionUploadPhotoPathConstMeta,
+      argValues: [that, url, path, filename, userAgent, sink],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiSessionKolibriSessionUploadPhotoPathConstMeta =>
+      const TaskConstMeta(
+        debugName: "KolibriSession_upload_photo_path",
+        argNames: ["that", "url", "path", "filename", "userAgent", "sink"],
       );
 
   @override
@@ -903,7 +1000,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_32(concurrency, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 23, port: port_);
+            funcId: 25, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -923,6 +1020,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<UploadEvent> crateApiSessionKolibriSessionUploadVideoPath(
+      {required KolibriSession that,
+      required String url,
+      required String path,
+      required int chunkSize,
+      required int concurrency}) {
+    final sink = RustStreamSink<UploadEvent>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+            that, serializer);
+        sse_encode_String(url, serializer);
+        sse_encode_String(path, serializer);
+        sse_encode_u_32(chunkSize, serializer);
+        sse_encode_u_32(concurrency, serializer);
+        sse_encode_StreamSink_upload_event_Sse(sink, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 26, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSessionKolibriSessionUploadVideoPathConstMeta,
+      argValues: [that, url, path, chunkSize, concurrency, sink],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiSessionKolibriSessionUploadVideoPathConstMeta =>
+      const TaskConstMeta(
+        debugName: "KolibriSession_upload_video_path",
+        argNames: ["that", "url", "path", "chunkSize", "concurrency", "sink"],
+      );
+
+  @override
   Uint8List crateApiSessionAuthMode(
       {required List<int> signature,
       required List<int> dex,
@@ -937,7 +1072,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_list_prim_u_8_loose(so, serializer);
         sse_encode_i_64(callsSeed, serializer);
         sse_encode_String(deviceId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -964,7 +1099,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_opt_String(userAgent, serializer);
         sse_encode_opt_String(proxy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 25, port: port_);
+            funcId: 28, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -991,7 +1126,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(vcp, serializer);
         sse_encode_String(conversationId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_box_autoadd_call_params,
@@ -1016,7 +1151,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(notificationJson, serializer);
         sse_encode_i_64(myUserId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_connection_info,
@@ -1041,7 +1176,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(notificationJson, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_box_autoadd_transmitted_data,
@@ -2498,9 +2633,11 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
       RustLib.instance.api.crateApiSessionKolibriSessionRequest(
           that: this, opcode: opcode, payload: payload);
 
-  /// like `request_json`, but reports the packet command (and any server
-  /// error) instead of throwing, so the host can rebuild its own Packet. Only
-  /// non-packet failures (timeout, closed, expired) come back as `Err`.
+  /// like `request_json`, but reports the packet command and, for an error
+  /// packet, its full payload (as tagged JSON) plus extracted message/key —
+  /// nothing is thrown, so the host can run its own rules over the error body
+  /// (e.g. treat `FAIL_LOGIN_TOKEN`/`FAIL_WRONG_PASSWORD` as expired). Only a
+  /// lost connection or timeout comes back as `Err`.
   Future<RequestOutcome> requestFull(
           {required int opcode, required String jsonIn}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionRequestFull(
@@ -2541,6 +2678,20 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
           filename: filename,
           userAgent: userAgent);
 
+  /// like [`Self::upload_file`], but streams the body off disk from `path`
+  /// (never loads the whole file into memory).
+  Stream<UploadEvent> uploadFilePath(
+          {required String url,
+          required String path,
+          required String filename,
+          String? userAgent}) =>
+      RustLib.instance.api.crateApiSessionKolibriSessionUploadFilePath(
+          that: this,
+          url: url,
+          path: path,
+          filename: filename,
+          userAgent: userAgent);
+
   /// photo upload, multipart/form-data. photoToken comes back in the Done body.
   Stream<UploadEvent> uploadPhoto(
           {required String url,
@@ -2554,6 +2705,19 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
           filename: filename,
           userAgent: userAgent);
 
+  /// like [`Self::upload_photo`], but streams the file part off disk from `path`.
+  Stream<UploadEvent> uploadPhotoPath(
+          {required String url,
+          required String path,
+          required String filename,
+          String? userAgent}) =>
+      RustLib.instance.api.crateApiSessionKolibriSessionUploadPhotoPath(
+          that: this,
+          url: url,
+          path: path,
+          filename: filename,
+          userAgent: userAgent);
+
   /// video upload, parallel resumable chunks. Done{status:200} means success.
   Stream<UploadEvent> uploadVideo(
           {required String url,
@@ -2564,6 +2728,20 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
           that: this,
           url: url,
           data: data,
+          chunkSize: chunkSize,
+          concurrency: concurrency);
+
+  /// like [`Self::upload_video`], but reads each chunk off disk from `path` on
+  /// demand (only one chunk per worker in memory).
+  Stream<UploadEvent> uploadVideoPath(
+          {required String url,
+          required String path,
+          required int chunkSize,
+          required int concurrency}) =>
+      RustLib.instance.api.crateApiSessionKolibriSessionUploadVideoPath(
+          that: this,
+          url: url,
+          path: path,
           chunkSize: chunkSize,
           concurrency: concurrency);
 }

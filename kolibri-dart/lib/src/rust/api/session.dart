@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'session.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `cmd_label`, `drive_upload`, `wire_json`
+// These functions are ignored because they are not marked as `pub`: `cmd_label`, `drive_upload`, `error_fields`, `map_str`, `wire_json`
 
 /// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
 /// signature/dex/so are raw digest bytes, passed in so they can change per app version
@@ -49,9 +49,11 @@ abstract class KolibriSession implements RustOpaqueInterface {
   /// awaits the response payload (raw msgpack); errors on server error or timeout
   Future<Uint8List> request({required int opcode, required List<int> payload});
 
-  /// like `request_json`, but reports the packet command (and any server
-  /// error) instead of throwing, so the host can rebuild its own Packet. Only
-  /// non-packet failures (timeout, closed, expired) come back as `Err`.
+  /// like `request_json`, but reports the packet command and, for an error
+  /// packet, its full payload (as tagged JSON) plus extracted message/key —
+  /// nothing is thrown, so the host can run its own rules over the error body
+  /// (e.g. treat `FAIL_LOGIN_TOKEN`/`FAIL_WRONG_PASSWORD` as expired). Only a
+  /// lost connection or timeout comes back as `Err`.
   Future<RequestOutcome> requestFull(
       {required int opcode, required String jsonIn});
 
@@ -76,6 +78,14 @@ abstract class KolibriSession implements RustOpaqueInterface {
       required String filename,
       String? userAgent});
 
+  /// like [`Self::upload_file`], but streams the body off disk from `path`
+  /// (never loads the whole file into memory).
+  Stream<UploadEvent> uploadFilePath(
+      {required String url,
+      required String path,
+      required String filename,
+      String? userAgent});
+
   /// photo upload, multipart/form-data. photoToken comes back in the Done body.
   Stream<UploadEvent> uploadPhoto(
       {required String url,
@@ -83,10 +93,25 @@ abstract class KolibriSession implements RustOpaqueInterface {
       required String filename,
       String? userAgent});
 
+  /// like [`Self::upload_photo`], but streams the file part off disk from `path`.
+  Stream<UploadEvent> uploadPhotoPath(
+      {required String url,
+      required String path,
+      required String filename,
+      String? userAgent});
+
   /// video upload, parallel resumable chunks. Done{status:200} means success.
   Stream<UploadEvent> uploadVideo(
       {required String url,
       required List<int> data,
+      required int chunkSize,
+      required int concurrency});
+
+  /// like [`Self::upload_video`], but reads each chunk off disk from `path` on
+  /// demand (only one chunk per worker in memory).
+  Stream<UploadEvent> uploadVideoPath(
+      {required String url,
+      required String path,
       required int chunkSize,
       required int concurrency});
 }
