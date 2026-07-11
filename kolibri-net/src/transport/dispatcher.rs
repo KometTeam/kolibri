@@ -8,9 +8,8 @@ use crate::protocol::packet::{cmd, Packet};
 
 type PendingResult = Result<Packet, TransportError>;
 
-/// Routes incoming packets: responses are matched to a waiting request by `seq`,
-/// pushes (cmd == 0) are broadcast to all subscribers. Mirrors the Dart
-/// `PacketDispatcher` — responses complete a pending future, pushes fan out.
+/// Routes incoming packets: responses match a waiting request by `seq`, pushes
+/// (cmd == 0) fan out to all subscribers.
 pub struct Dispatcher {
     pending: Mutex<HashMap<u16, oneshot::Sender<PendingResult>>>,
     push_tx: broadcast::Sender<Packet>,
@@ -25,8 +24,7 @@ impl Dispatcher {
         }
     }
 
-    /// Register interest in the response for `seq`. If a request reused this
-    /// `seq` before its response arrived, the previous waiter is failed.
+    /// If `seq` was reused before its response arrived, the previous waiter fails.
     pub fn register(&self, seq: u16) -> oneshot::Receiver<PendingResult> {
         let (tx, rx) = oneshot::channel();
         let mut pending = self.pending.lock().unwrap();
@@ -40,8 +38,6 @@ impl Dispatcher {
         self.push_tx.subscribe()
     }
 
-    /// Route a decoded packet. Responses (ok / error / not-found) complete the
-    /// pending waiter for their `seq`; pushes are broadcast.
     pub fn dispatch(&self, packet: Packet) {
         let is_response = matches!(packet.cmd, cmd::OK | cmd::ERROR | cmd::NOT_FOUND);
         if is_response {
@@ -56,14 +52,13 @@ impl Dispatcher {
             };
             let _ = tx.send(result);
         } else {
-            // cmd == 0 → server push. broadcast::send errors only when there are
-            // no subscribers, which is fine to ignore.
+            // send errors only when there are no subscribers, ignore that
             let _ = self.push_tx.send(packet);
         }
     }
 
-    /// Fail every pending request — called when the connection drops so awaiting
-    /// callers get [`TransportError::ConnectionClosed`] instead of hanging.
+    /// Called on disconnect so awaiting callers get `ConnectionClosed` instead
+    /// of hanging.
     pub fn fail_all(&self) {
         let mut pending = self.pending.lock().unwrap();
         for (_, tx) in pending.drain() {
@@ -72,8 +67,6 @@ impl Dispatcher {
     }
 }
 
-/// Build a [`TransportError`] from an error packet's payload, mirroring the Dart
-/// `messageFromErrorPayload` + session-expired detection.
 fn error_from_payload(packet: &Packet) -> TransportError {
     let value = match packet.value() {
         Ok(v) => v,

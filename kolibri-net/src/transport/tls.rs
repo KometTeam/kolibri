@@ -8,13 +8,10 @@ use tokio_rustls::TlsConnector;
 
 use super::error::TransportError;
 
-/// Build a TLS connector. In production it verifies the server certificate
-/// against the bundled Mozilla root store; when `insecure` is set it accepts any
-/// certificate — the equivalent of the Dart debug `onBadCertificate => true`
-/// flag, for self-signed / MitM-debug scenarios only.
+/// Verifies against the bundled Mozilla root store; `insecure` accepts any cert
+/// (self-signed / MitM-debug only).
 ///
-/// Note: for production parity with Dart's `SecureSocket` (which uses the OS
-/// trust store), swap the root store for `rustls-platform-verifier`.
+/// For OS-trust-store parity, swap the root store for `rustls-platform-verifier`.
 pub fn build_connector(insecure: bool) -> Result<TlsConnector, TransportError> {
     let provider = Arc::new(ring::default_provider());
 
@@ -39,8 +36,7 @@ pub fn build_connector(insecure: bool) -> Result<TlsConnector, TransportError> {
     Ok(TlsConnector::from(Arc::new(config)))
 }
 
-/// Certificate verifier that accepts everything. DEBUG ONLY — leaves the
-/// connection open to man-in-the-middle attacks.
+/// Accepts every cert. DEBUG ONLY, wide open to MitM.
 #[derive(Debug)]
 struct AcceptAnyCert(Arc<CryptoProvider>);
 

@@ -1,5 +1,4 @@
-//! Protocol operation codes. Generated from `lib/core/protocol/opcode_map.dart`;
-//! naming follows the server-side convention. Use [`name`] for logging labels.
+//! Protocol operation codes, from `lib/core/protocol/opcode_map.dart`.
 
 // ── Session ──────────────────────────────────────────────────────────────
 pub const PING: u16 = 1;
@@ -213,7 +212,7 @@ pub const STORIES_EDIT: u16 = 217;
 pub const STORIES_DELETE: u16 = 218;
 pub const STORIES_GET_BY_STORY_ID: u16 = 220;
 
-/// Human-readable label for an opcode, or `UNKNOWN(n)` if unmapped.
+/// Label for an opcode, or `UNKNOWN(n)` if unmapped.
 pub fn name(opcode: u16) -> String {
     match opcode {
         PING => "PING".into(),

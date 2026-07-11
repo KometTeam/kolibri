@@ -1,16 +1,15 @@
 use super::codec;
 use thiserror::Error;
 
-/// Buffer overflow guard (16 MB) — mirrors the Dart `PacketReceiver`.
+/// Buffer overflow guard.
 pub const MAX_BUFFER_SIZE: usize = 16 * 1024 * 1024;
 
 #[derive(Debug, Error)]
 #[error("PacketReceiver buffer overflow ({0} B)")]
 pub struct OverflowError(pub usize);
 
-/// Reassembles the raw TLS byte stream into complete framed packets. Feed it
-/// arbitrary chunks; it returns whichever whole packets are now available and
-/// keeps any partial remainder buffered for the next call.
+/// Reassembles the TLS byte stream into whole packets. Feed arbitrary chunks;
+/// get back whichever packets are complete, partial remainder stays buffered.
 #[derive(Default)]
 pub struct PacketReceiver {
     buf: Vec<u8>,
@@ -21,8 +20,8 @@ impl PacketReceiver {
         Self { buf: Vec::new() }
     }
 
-    /// Append `data` and drain every complete packet now buffered. Each returned
-    /// `Vec<u8>` is a full header+payload slice ready for [`codec::decode`].
+    /// Append `data`, drain complete packets. Each is a full header+payload
+    /// buffer ready for [`codec::decode`].
     pub fn feed(&mut self, data: &[u8]) -> Result<Vec<Vec<u8>>, OverflowError> {
         self.buf.extend_from_slice(data);
 

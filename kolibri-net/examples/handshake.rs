@@ -1,7 +1,5 @@
-//! Connect to the real Komet/oneme server, run the sessionInit handshake, print
-//! what the server returns, then disconnect. Sends NO SMS and performs no
-//! account action — just proves the protocol stack (TLS, framing, MessagePack,
-//! handshake) is compatible with production.
+//! Runs the sessionInit handshake against production and disconnects. No SMS,
+//! no account action.
 //!
 //!     cargo run --example handshake
 

@@ -1,6 +1,5 @@
 //! Komet binary protocol: packet layout, wire codec, stream framing,
-//! compression, and operation codes. This module is transport-agnostic and has
-//! no async or I/O dependencies — it turns bytes into [`Packet`]s and back.
+//! compression, opcodes. Transport-agnostic, no I/O; just bytes <-> [`Packet`].
 
 pub mod codec;
 pub mod compress;

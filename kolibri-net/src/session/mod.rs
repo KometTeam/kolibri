@@ -1,7 +1,7 @@
-//! Session state machine on top of the [`crate::transport`] client: connect →
-//! sessionInit handshake → online, with keepalive pings and exponential-backoff
-//! reconnect. Device values for the handshake are supplied by the host; the wire
-//! shape and the connect/ping/reconnect sequence live here.
+//! Session state machine over the transport client: connect, sessionInit
+//! handshake, online, with keepalive pings and exponential-backoff reconnect.
+//! Host supplies device values; the wire shape and connect/ping/reconnect
+//! sequence live here.
 
 mod config;
 mod manager;

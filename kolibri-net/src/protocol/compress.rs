@@ -1,7 +1,6 @@
 use thiserror::Error;
 
-/// Anti-bomb ceiling for a single decompressed payload (32 MB), mirroring the
-/// Dart client.
+/// Decompression-bomb ceiling for one payload.
 pub const MAX_DECOMPRESSED_SIZE: usize = 32 * 1024 * 1024;
 
 #[derive(Debug, Error)]
@@ -20,11 +19,8 @@ pub enum CompressError {
     Lz4Frame(String),
 }
 
-/// Sniff the compression format by magic number and decompress accordingly.
-///
-/// The server may send LZ4 block, LZ4 frame, or Zstandard depending on the
-/// response — the format is not signalled in the header, only the fact that the
-/// payload is compressed (via the header flag byte).
+/// Sniff format by magic number. The header only flags that a payload is
+/// compressed, not which of LZ4 block / LZ4 frame / Zstd the server picked.
 pub fn decompress(src: &[u8]) -> Result<Vec<u8>, CompressError> {
     // Zstandard magic: 28 B5 2F FD
     if src.len() >= 4 && src[0] == 0x28 && src[1] == 0xB5 && src[2] == 0x2F && src[3] == 0xFD {
@@ -34,7 +30,7 @@ pub fn decompress(src: &[u8]) -> Result<Vec<u8>, CompressError> {
     if src.len() >= 4 && src[0] == 0x04 && src[1] == 0x22 && src[2] == 0x4D && src[3] == 0x18 {
         return decompress_lz4_frame(src);
     }
-    // Default: LZ4 block (no magic / no frame header)
+    // no magic: LZ4 block
     decompress_lz4_block(src, MAX_DECOMPRESSED_SIZE)
 }
 
@@ -52,15 +48,13 @@ fn decompress_lz4_frame(src: &[u8]) -> Result<Vec<u8>, CompressError> {
     Ok(out)
 }
 
-/// Compress with the raw LZ4 block format (no frame header, no size prefix) —
-/// the format the server expects for outgoing payloads. The decompressed size is
-/// communicated out-of-band via the packet header's flag byte, not in the data.
+/// Raw LZ4 block (no frame header, no size prefix), what the server expects
+/// outgoing. Decompressed size travels out-of-band in the header flag byte.
 pub fn compress_lz4_block(src: &[u8]) -> Vec<u8> {
     lz4_flex::block::compress(src)
 }
 
-/// Compress with the LZ4 frame format (magic 04 22 4D 18). Kept for
-/// completeness / interop tests; outgoing traffic uses [`compress_lz4_block`].
+/// LZ4 frame format. Kept for interop tests; outgoing traffic uses the block form.
 pub fn compress_lz4_frame(src: &[u8]) -> Vec<u8> {
     use std::io::Write;
     let mut enc = lz4_flex::frame::FrameEncoder::new(Vec::new());
@@ -68,9 +62,8 @@ pub fn compress_lz4_frame(src: &[u8]) -> Vec<u8> {
     enc.finish().expect("in-memory finish cannot fail")
 }
 
-/// LZ4 block decompression (no frame header). Ported 1:1 from the Dart
-/// `lz4BlockDecompress` so byte behaviour matches exactly; the output buffer
-/// grows dynamically since the block format carries no size prefix.
+/// LZ4 block decompression. Block format has no size prefix, so the output grows
+/// dynamically.
 pub fn decompress_lz4_block(src: &[u8], max_size: usize) -> Result<Vec<u8>, CompressError> {
     let mut out: Vec<u8> = Vec::with_capacity(1024);
     let mut pos = 0usize;
@@ -134,7 +127,7 @@ pub fn decompress_lz4_block(src: &[u8], max_size: usize) -> Result<Vec<u8>, Comp
             return Err(CompressError::OffsetOutOfRange);
         }
         let start = out.len() - offset;
-        // Overlapping copy must proceed byte-by-byte (offset may be < match_len).
+        // overlapping copy: offset may be < match_len, so go byte-by-byte
         for i in 0..match_len {
             let b = out[start + i];
             out.push(b);

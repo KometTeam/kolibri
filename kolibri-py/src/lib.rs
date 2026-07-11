@@ -1,6 +1,5 @@
-//! Python bindings for `kolibri-net`. Exposes a synchronous `Session` that owns a
-//! tokio runtime internally; MessagePack payloads are converted to/from native
-//! Python dicts/lists so callers never touch bytes.
+//! Python bindings for `kolibri-net`. Blocking `Session` owning its own tokio
+//! runtime; msgpack payloads convert to/from native Python dicts/lists.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -18,8 +17,7 @@ use rmpv::Value;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
 
-/// A connected Komet session. Blocking API: each method drives the internal
-/// tokio runtime to completion.
+/// Blocking session; each method drives the internal tokio runtime to completion.
 #[pyclass]
 struct Session {
     rt: Arc<Runtime>,
@@ -110,8 +108,7 @@ impl Session {
         Ok(Self { rt, inner, push_rx })
     }
 
-    /// Connect and perform the sessionInit handshake. Returns a dict with
-    /// `calls_seed`, `device_name`, and the full `payload`.
+    /// Connect and run the sessionInit handshake. Returns {calls_seed, device_name, payload}.
     fn connect(&self, py: Python<'_>) -> PyResult<PyObject> {
         let rt = self.rt.clone();
         let inner = self.inner.clone();
@@ -126,8 +123,7 @@ impl Session {
         Ok(dict.into_any().unbind())
     }
 
-    /// Send a request and return the decoded response payload. Raises on a
-    /// server error packet or timeout.
+    /// Send a request, return the decoded response. Raises on a server error packet or timeout.
     fn request(&self, py: Python<'_>, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<PyObject> {
         let bytes = encode_value(&py_to_value(payload)?);
         let rt = self.rt.clone();
@@ -141,14 +137,83 @@ impl Session {
         Ok(value_to_py(py, &value)?.unbind())
     }
 
-    /// Fire-and-forget send; returns the assigned sequence number.
+    /// Fire-and-forget send; returns the sequence number.
     fn send(&self, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<u16> {
         let bytes = encode_value(&py_to_value(payload)?);
         self.inner.send(opcode, &bytes).map_err(to_pyerr)
     }
 
-    /// Wait for the next server push. Returns a dict `{opcode, payload}` or None
-    /// on timeout.
+    /// Upload a generic file to a CDN URL. `progress`, if given, gets (sent, total).
+    #[pyo3(signature = (url, data, filename, progress = None))]
+    fn upload_file(
+        &self,
+        py: Python<'_>,
+        url: &str,
+        data: Vec<u8>,
+        filename: &str,
+        progress: Option<PyObject>,
+    ) -> PyResult<PyObject> {
+        let rt = self.rt.clone();
+        let url = url.to_string();
+        let filename = filename.to_string();
+        let progress = py_progress(progress);
+        let resp = py
+            .allow_threads(move || {
+                rt.block_on(kolibri_net::media::upload_file(
+                    &url, &data, &filename, false, progress,
+                ))
+            })
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        media_response(py, resp)
+    }
+
+    /// Upload a photo via multipart/form-data. Parse `photoToken` from the JSON body.
+    #[pyo3(signature = (url, data, filename, progress = None))]
+    fn upload_photo(
+        &self,
+        py: Python<'_>,
+        url: &str,
+        data: Vec<u8>,
+        filename: &str,
+        progress: Option<PyObject>,
+    ) -> PyResult<PyObject> {
+        let rt = self.rt.clone();
+        let url = url.to_string();
+        let filename = filename.to_string();
+        let progress = py_progress(progress);
+        let resp = py
+            .allow_threads(move || {
+                rt.block_on(kolibri_net::media::upload_photo(
+                    &url, &data, &filename, false, progress,
+                ))
+            })
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        media_response(py, resp)
+    }
+
+    /// Upload a video in parallel resumable chunks. `progress` gets (sent, total).
+    #[pyo3(signature = (url, data, chunk_size = 2 * 1024 * 1024, concurrency = 4, progress = None))]
+    fn upload_video(
+        &self,
+        py: Python<'_>,
+        url: &str,
+        data: Vec<u8>,
+        chunk_size: usize,
+        concurrency: usize,
+        progress: Option<PyObject>,
+    ) -> PyResult<bool> {
+        let rt = self.rt.clone();
+        let url = url.to_string();
+        let progress = py_progress(progress);
+        py.allow_threads(move || {
+            rt.block_on(kolibri_net::media::upload_video(
+                &url, data, chunk_size, concurrency, false, progress,
+            ))
+        })
+        .map_err(|e| PyRuntimeError::new_err(e.to_string()))
+    }
+
+    /// Next server push as {opcode, payload}, or None on timeout.
     #[pyo3(signature = (timeout_secs = None))]
     fn next_push(&self, py: Python<'_>, timeout_secs: Option<f64>) -> PyResult<Option<PyObject>> {
         let rt = self.rt.clone();
@@ -187,10 +252,30 @@ impl Session {
         }
     }
 
-    /// Stop the session and disable auto-reconnect.
+    /// Stop the session; also disables auto-reconnect.
     fn disconnect(&self) {
         self.inner.disconnect();
     }
+}
+
+/// Wrap a Python `(sent, total)` callable into a core progress callback. Upload
+/// runs with the GIL released; the callback re-acquires it.
+fn py_progress(progress: Option<PyObject>) -> Option<kolibri_net::media::ProgressFn> {
+    progress.map(|cb| {
+        let cb = std::sync::Arc::new(cb);
+        std::sync::Arc::new(move |sent: u64, total: u64| {
+            Python::with_gil(|py| {
+                let _ = cb.call1(py, (sent, total));
+            });
+        }) as kolibri_net::media::ProgressFn
+    })
+}
+
+fn media_response(py: Python<'_>, resp: kolibri_net::media::HttpResponse) -> PyResult<PyObject> {
+    let dict = PyDict::new(py);
+    dict.set_item("status", resp.status)?;
+    dict.set_item("body", PyBytes::new(py, &resp.body))?;
+    Ok(dict.into_any().unbind())
 }
 
 fn to_pyerr(e: TransportError) -> PyErr {
@@ -206,8 +291,7 @@ fn encode_value(value: &Value) -> Vec<u8> {
     out
 }
 
-/// Convert a Python object into a MessagePack value. bool is checked before int
-/// (Python bool is a subclass of int).
+/// Python object -> msgpack value. bool checked before int (Python bool subclasses int).
 fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if obj.is_none() {
         return Ok(Value::Nil);
@@ -260,7 +344,6 @@ fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     )))
 }
 
-/// Convert a MessagePack value into a Python object.
 fn value_to_py<'py>(py: Python<'py>, value: &Value) -> PyResult<Bound<'py, PyAny>> {
     Ok(match value {
         Value::Nil => py.None().into_bound(py),
@@ -299,37 +382,35 @@ fn value_to_py<'py>(py: Python<'py>, value: &Value) -> PyResult<Bound<'py, PyAny
     })
 }
 
-/// Compute the 96-byte anti-spoof `mode` fingerprint for the authRequest
-/// payload: three SHA-256 hashes of (digest || int64_be(calls_seed) ||
-/// utf8(device_id)) concatenated.
+const DEFAULT_SIGNATURE_DIGEST: &str =
+    "1684414033eb263e2c615f8b7df5ed8793850a07656304997fbf07e9e21e1e93";
+const DEFAULT_SO_DIGEST: &str = "90e2fb8745b17b42a10182f8d8ac590e3fca5b311e2ce2d5144fa2c18cb3090d";
+const DEFAULT_DEX_DIGEST: &str = "0a6265f6e5d8231b9cba641f8c40475e6f3baeb06ed41b804b9bf7307aa4214e";
+
+fn hex_bytes(s: &str) -> Vec<u8> {
+    (0..s.len() / 2)
+        .map(|i| u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).unwrap())
+        .collect()
+}
+
+/// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
+/// signature/dex/so are raw digest bytes; omitted ones fall back to app defaults.
 #[pyfunction]
-fn auth_mode<'py>(py: Python<'py>, calls_seed: i64, device_id: &str) -> Bound<'py, PyBytes> {
-    use sha2::{Digest, Sha256};
-
-    const SIGNATURE: &str = "1684414033eb263e2c615f8b7df5ed8793850a07656304997fbf07e9e21e1e93";
-    const SO: &str = "90e2fb8745b17b42a10182f8d8ac590e3fca5b311e2ce2d5144fa2c18cb3090d";
-    const DEX: &str = "0a6265f6e5d8231b9cba641f8c40475e6f3baeb06ed41b804b9bf7307aa4214e";
-
-    fn hex(s: &str) -> Vec<u8> {
-        (0..s.len() / 2)
-            .map(|i| u8::from_str_radix(&s[i * 2..i * 2 + 2], 16).unwrap())
-            .collect()
-    }
-    fn digest(prefix: &[u8], seed: &[u8], device: &[u8]) -> Vec<u8> {
-        let mut h = Sha256::new();
-        h.update(prefix);
-        h.update(seed);
-        h.update(device);
-        h.finalize().to_vec()
-    }
-
-    let seed = calls_seed.to_be_bytes();
-    let device = device_id.as_bytes();
-    let mut out = Vec::with_capacity(96);
-    out.extend(digest(&hex(SIGNATURE), &seed, device));
-    out.extend(digest(&hex(DEX), &seed, device));
-    out.extend(digest(&hex(SO), &seed, device));
-    PyBytes::new(py, &out)
+#[pyo3(signature = (calls_seed, device_id, signature = None, dex = None, so = None))]
+fn auth_mode<'py>(
+    py: Python<'py>,
+    calls_seed: i64,
+    device_id: &str,
+    signature: Option<Vec<u8>>,
+    dex: Option<Vec<u8>>,
+    so: Option<Vec<u8>>,
+) -> Bound<'py, PyBytes> {
+    let signature = signature.unwrap_or_else(|| hex_bytes(DEFAULT_SIGNATURE_DIGEST));
+    let dex = dex.unwrap_or_else(|| hex_bytes(DEFAULT_DEX_DIGEST));
+    let so = so.unwrap_or_else(|| hex_bytes(DEFAULT_SO_DIGEST));
+    let mode =
+        kolibri_net::auth::chat_cache_fingerprint(&signature, &dex, &so, calls_seed, device_id);
+    PyBytes::new(py, &mode)
 }
 
 #[pymodule]

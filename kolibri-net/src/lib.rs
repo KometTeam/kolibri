@@ -1,16 +1,10 @@
-//! # kolibri-net
+//! Reusable core of the Komet protocol: binary framing over a persistent TLS
+//! socket, MessagePack payloads, LZ4/Zstd compression.
 //!
-//! Reusable core of the Komet messaging protocol: a hand-rolled binary framing
-//! over a persistent TLS TCP socket, with MessagePack payloads and LZ4/Zstd
-//! compression.
-//!
-//! Phase 1 (this module set) covers the pure, I/O-free protocol layer:
-//! [`protocol::encode`] / [`protocol::decode`], the [`protocol::PacketReceiver`]
-//! stream de-framer, and compression. Later phases add the async transport,
-//! session state machine, and FFI bindings (Dart via flutter_rust_bridge,
-//! Python via PyO3) — all over this same core so every client shares one
-//! protocol implementation.
+//! This module set is the pure, I/O-free protocol layer (encode/decode, stream
+//! de-framer, compression). Transport, session, and FFI bindings build on it.
 
+pub mod auth;
 pub mod protocol;
 
 #[cfg(feature = "transport")]
@@ -18,6 +12,9 @@ pub mod transport;
 
 #[cfg(feature = "transport")]
 pub mod session;
+
+#[cfg(feature = "transport")]
+pub mod media;
 
 pub use protocol::{
     cmd, decode, encode, opcodes, Packet, PacketReceiver, HEADER_SIZE, PROTOCOL_VERSION,

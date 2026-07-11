@@ -1,0 +1,265 @@
+use std::sync::Arc;
+use std::time::Duration;
+
+use crate::frb_generated::StreamSink;
+use flutter_rust_bridge::frb;
+use kolibri_net::{
+    ClientConfig, HandshakeConfig, Session, SessionConfig, SessionState, UserAgent,
+};
+use tokio::runtime::Runtime;
+
+/// Device + connection options. Device fields feed the sessionInit handshake.
+pub struct SessionOptions {
+    pub host: String,
+    pub port: u16,
+    pub device_id: String,
+    pub instance_id: String,
+    pub app_version: String,
+    pub build_number: i64,
+    pub device_type: String,
+    pub os_version: String,
+    pub timezone: String,
+    pub screen: String,
+    pub push_device_type: String,
+    pub arch: String,
+    pub locale: String,
+    pub device_name: String,
+    pub device_locale: String,
+    pub client_session_id: i64,
+    pub ping_interval_secs: u64,
+    pub auto_reconnect: bool,
+    pub insecure_tls: bool,
+}
+
+/// sessionInit handshake result. `payload` is raw MessagePack; decode it Dart-side.
+pub struct HandshakeInfo {
+    pub calls_seed: Option<i64>,
+    pub device_name: Option<String>,
+    pub payload: Vec<u8>,
+}
+
+/// Server push; `payload` is raw MessagePack.
+pub struct PushEvent {
+    pub opcode: u16,
+    pub payload: Vec<u8>,
+}
+
+/// Upload events: progress updates, then a terminal `Done` (status + body) or `Error`.
+pub enum UploadEvent {
+    Progress { sent: u64, total: u64 },
+    Done { status: u16, body: Vec<u8> },
+    Error { message: String },
+}
+
+/// Drive an upload, forwarding progress + terminal result to `sink`.
+async fn drive_upload<F, Fut>(sink: StreamSink<UploadEvent>, upload: F)
+where
+    F: FnOnce(kolibri_net::media::ProgressFn) -> Fut,
+    Fut: std::future::Future<Output = Result<(u16, Vec<u8>), String>>,
+{
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<UploadEvent>();
+    let drain = tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            if sink.add(event).is_err() {
+                break;
+            }
+        }
+    });
+
+    let tx_progress = tx.clone();
+    let progress: kolibri_net::media::ProgressFn = Arc::new(move |sent, total| {
+        let _ = tx_progress.send(UploadEvent::Progress { sent, total });
+    });
+
+    let terminal = match upload(progress).await {
+        Ok((status, body)) => UploadEvent::Done { status, body },
+        Err(message) => UploadEvent::Error { message },
+    };
+    let _ = tx.send(terminal);
+    drop(tx);
+    let _ = drain.await;
+}
+
+/// Managed Kolibri session. frb runs the blocking methods on a worker thread, so
+/// Dart sees `Future`s.
+pub struct KolibriSession {
+    rt: Arc<Runtime>,
+    inner: Arc<Session>,
+}
+
+impl KolibriSession {
+    #[frb(sync)]
+    pub fn new(options: SessionOptions) -> Result<KolibriSession, String> {
+        let user_agent = UserAgent {
+            device_type: options.device_type,
+            app_version: options.app_version,
+            os_version: options.os_version,
+            timezone: options.timezone,
+            screen: options.screen,
+            push_device_type: options.push_device_type,
+            arch: options.arch,
+            locale: options.locale,
+            build_number: options.build_number,
+            device_name: options.device_name,
+            device_locale: options.device_locale,
+        };
+        let handshake = HandshakeConfig {
+            instance_id: options.instance_id,
+            device_id: options.device_id,
+            client_session_id: options.client_session_id,
+            user_agent,
+        };
+        let mut client = ClientConfig::new(options.host, options.port);
+        client.insecure_tls = options.insecure_tls;
+        let mut config = SessionConfig::new(client, handshake);
+        config.ping_interval = Duration::from_secs(options.ping_interval_secs);
+        config.auto_reconnect = options.auto_reconnect;
+
+        let rt = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| e.to_string())?,
+        );
+        let inner = Arc::new(Session::new(config));
+        Ok(KolibriSession { rt, inner })
+    }
+
+    /// Connect and run the sessionInit handshake.
+    pub fn connect(&self) -> Result<HandshakeInfo, String> {
+        let info = self
+            .rt
+            .block_on(self.inner.connect())
+            .map_err(|e| e.to_string())?;
+        let mut payload = Vec::new();
+        rmpv::encode::write_value(&mut payload, &info.payload)
+            .map_err(|e| e.to_string())?;
+        Ok(HandshakeInfo {
+            calls_seed: info.calls_seed,
+            device_name: info.device_name,
+            payload,
+        })
+    }
+
+    /// Send a request, await the response payload (raw msgpack). Errors on server error or timeout.
+    pub fn request(&self, opcode: u16, payload: Vec<u8>) -> Result<Vec<u8>, String> {
+        let packet = self
+            .rt
+            .block_on(self.inner.request(opcode, &payload))
+            .map_err(|e| e.to_string())?;
+        Ok(packet.payload)
+    }
+
+    /// Fire-and-forget send; returns the seq number.
+    #[frb(sync)]
+    pub fn send(&self, opcode: u16, payload: Vec<u8>) -> Result<u32, String> {
+        self.inner
+            .send(opcode, &payload)
+            .map(|seq| seq as u32)
+            .map_err(|e| e.to_string())
+    }
+
+    /// Upload a generic file to a CDN URL. Streams progress, then Done/Error.
+    pub fn upload_file(
+        &self,
+        url: String,
+        data: Vec<u8>,
+        filename: String,
+        sink: StreamSink<UploadEvent>,
+    ) {
+        self.rt.spawn(drive_upload(sink, move |progress| async move {
+            kolibri_net::media::upload_file(&url, &data, &filename, false, Some(progress))
+                .await
+                .map(|r| (r.status, r.body))
+                .map_err(|e| e.to_string())
+        }));
+    }
+
+    /// Upload a photo via multipart/form-data. Parse `photoToken` from the `Done` body.
+    pub fn upload_photo(
+        &self,
+        url: String,
+        data: Vec<u8>,
+        filename: String,
+        sink: StreamSink<UploadEvent>,
+    ) {
+        self.rt.spawn(drive_upload(sink, move |progress| async move {
+            kolibri_net::media::upload_photo(&url, &data, &filename, false, Some(progress))
+                .await
+                .map(|r| (r.status, r.body))
+                .map_err(|e| e.to_string())
+        }));
+    }
+
+    /// Upload a video in parallel resumable chunks. `Done{status:200}` means success.
+    pub fn upload_video(
+        &self,
+        url: String,
+        data: Vec<u8>,
+        chunk_size: u32,
+        concurrency: u32,
+        sink: StreamSink<UploadEvent>,
+    ) {
+        self.rt.spawn(drive_upload(sink, move |progress| async move {
+            match kolibri_net::media::upload_video(
+                &url,
+                data,
+                chunk_size as usize,
+                concurrency as usize,
+                false,
+                Some(progress),
+            )
+            .await
+            {
+                Ok(true) => Ok((200, Vec::new())),
+                Ok(false) => Err("upload failed".to_string()),
+                Err(e) => Err(e.to_string()),
+            }
+        }));
+    }
+
+    /// Server pushes; yields until the session is dropped.
+    pub fn pushes(&self, sink: StreamSink<PushEvent>) {
+        let mut rx = self.inner.subscribe();
+        self.rt.spawn(async move {
+            while let Ok(packet) = rx.recv().await {
+                let event = PushEvent {
+                    opcode: packet.opcode,
+                    payload: packet.payload,
+                };
+                if sink.add(event).is_err() {
+                    break;
+                }
+            }
+        });
+    }
+
+    #[frb(sync)]
+    pub fn state(&self) -> String {
+        match self.inner.state() {
+            SessionState::Disconnected => "disconnected",
+            SessionState::Connecting => "connecting",
+            SessionState::Connected => "connected",
+            SessionState::Online => "online",
+        }
+        .to_string()
+    }
+
+    #[frb(sync)]
+    pub fn disconnect(&self) {
+        self.inner.disconnect();
+    }
+}
+
+/// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
+/// signature/dex/so are raw digest bytes, passed in so they can change per app version.
+#[frb(sync)]
+pub fn auth_mode(
+    signature: Vec<u8>,
+    dex: Vec<u8>,
+    so: Vec<u8>,
+    calls_seed: i64,
+    device_id: String,
+) -> Vec<u8> {
+    kolibri_net::auth::chat_cache_fingerprint(&signature, &dex, &so, calls_seed, &device_id)
+}

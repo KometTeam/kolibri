@@ -18,13 +18,12 @@ use crate::protocol::packet::Packet;
 const READ_CHUNK: usize = 64 * 1024;
 const PUSH_CHANNEL_CAPACITY: usize = 256;
 
-/// Connection parameters. `host` is used both for the TCP connection and as the
-/// TLS server name (SNI).
+/// `host` doubles as the TLS server name (SNI).
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
     pub host: String,
     pub port: u16,
-    /// Accept any TLS certificate (debug only — mirrors the Dart insecure flag).
+    /// accept any TLS cert, debug only
     pub insecure_tls: bool,
     pub connect_timeout: Duration,
     pub request_timeout: Duration,
@@ -47,9 +46,8 @@ impl ClientConfig {
     }
 }
 
-/// An async client over the persistent TLS connection. Send requests with
-/// [`Client::request`] (awaits the matching response) and observe server pushes
-/// via [`Client::subscribe`].
+/// Async client over the persistent TLS connection: [`Client::request`] awaits
+/// the matching response, [`Client::subscribe`] observes server pushes.
 pub struct Client {
     seq: AtomicU16,
     write_tx: mpsc::UnboundedSender<Vec<u8>>,
@@ -60,7 +58,6 @@ pub struct Client {
 }
 
 impl Client {
-    /// Open a TCP+TLS connection and start the reader/writer tasks.
     pub async fn connect(config: ClientConfig) -> Result<Self, TransportError> {
         let connector = build_connector(config.insecure_tls)?;
 
@@ -134,8 +131,7 @@ impl Client {
         })
     }
 
-    /// Next sequence number: pre-increment wrapping at 2^16, so the first
-    /// request is `1` — identical to the Dart `PacketSender`.
+    /// pre-increment wrapping at 2^16, so the first request is seq 1
     fn next_seq(&self) -> u16 {
         self.seq.fetch_add(1, Ordering::Relaxed).wrapping_add(1)
     }
@@ -144,15 +140,13 @@ impl Client {
         *self.connected_tx.borrow()
     }
 
-    /// A watch receiver that flips to `false` when the connection drops — used by
-    /// the session supervisor to trigger reconnection.
+    /// flips to `false` when the connection drops; drives supervisor reconnect
     pub fn subscribe_connected(&self) -> watch::Receiver<bool> {
         self.connected_tx.subscribe()
     }
 
-    /// Send a request and await its response. `payload` is already-serialized
-    /// MessagePack bytes. A not-found response returns `Ok` (inspect
-    /// [`Packet::is_not_found`]); only an error packet returns `Err`.
+    /// `payload` is already-serialized msgpack. not-found comes back as `Ok`
+    /// (see [`Packet::is_not_found`]); only an error packet is `Err`.
     pub async fn request(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
         if !self.is_connected() {
             return Err(TransportError::ConnectionClosed);
@@ -173,8 +167,8 @@ impl Client {
         }
     }
 
-    /// Fire-and-forget send with no response tracking (e.g. typing indicators,
-    /// keepalive pings). Returns the assigned sequence number.
+    /// Fire-and-forget, no response tracking (typing indicators, pings).
+    /// Returns the assigned seq.
     pub fn send(&self, opcode: u16, payload: &[u8]) -> Result<u16, TransportError> {
         if !self.is_connected() {
             return Err(TransportError::ConnectionClosed);
@@ -187,13 +181,11 @@ impl Client {
         Ok(seq)
     }
 
-    /// Subscribe to server pushes. Each subscriber gets every push sent after it
-    /// subscribes.
+    /// Each subscriber gets every push sent after it subscribes.
     pub fn subscribe(&self) -> broadcast::Receiver<Packet> {
         self.dispatcher.subscribe()
     }
 
-    /// Close the connection and stop the background tasks.
     pub fn close(&self) {
         self.connected_tx.send_replace(false);
         self.dispatcher.fail_all();

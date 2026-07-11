@@ -2,9 +2,8 @@ use std::time::Duration;
 
 use crate::transport::ClientConfig;
 
-/// The `userAgent` sub-map of the sessionInit handshake. The host (Flutter,
-/// Python, …) supplies these device values; the wire field names and nesting
-/// live in Rust so every client sends an identical handshake shape.
+/// `userAgent` sub-map of the sessionInit handshake. Host supplies the device
+/// values; field names and nesting stay here so every client sends the same shape.
 #[derive(Debug, Clone)]
 pub struct UserAgent {
     pub device_type: String,
@@ -29,17 +28,14 @@ pub struct HandshakeConfig {
     pub user_agent: UserAgent,
 }
 
-/// Full session configuration: how to connect, what handshake to send, and the
-/// keepalive / reconnect behaviour.
 #[derive(Debug, Clone)]
 pub struct SessionConfig {
     pub client: ClientConfig,
     pub handshake: HandshakeConfig,
-    /// Keepalive ping interval once the session is online.
+    /// keepalive ping interval once online
     pub ping_interval: Duration,
-    /// `interactive` flag sent in the ping payload (false = ghost/offline mode).
+    /// `interactive` flag in the ping payload (false = ghost/offline mode)
     pub ping_interactive: bool,
-    /// Reconnect automatically after an unexpected disconnect.
     pub auto_reconnect: bool,
 }
 

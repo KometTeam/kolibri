@@ -1,13 +1,9 @@
-//! End-to-end auth flow against the real Komet/oneme server: connect → TLS →
-//! sessionInit handshake → request an OTP code for a phone number → (optionally)
-//! verify the code entered by the user.
+//! WARNING: sends a REAL SMS to the given number via api.oneme.ru.
 //!
-//! Usage:
 //!     cargo run --example auth_request -- +7XXXXXXXXXX
 //!
-//! This sends a REAL SMS to the given number via api.oneme.ru. Use your own
-//! number. Override the device identity with env vars KOLIBRI_DEVICE_ID /
-//! KOLIBRI_INSTANCE_ID if you want a fresh install fingerprint.
+//! Override device identity with KOLIBRI_DEVICE_ID / KOLIBRI_INSTANCE_ID for a
+//! fresh install fingerprint.
 
 use std::time::Duration;
 
@@ -24,8 +20,8 @@ const PORT: u16 = 443;
 const APP_VERSION: &str = "26.20.2";
 const BUILD_NUMBER: i64 = 6758;
 
-// Hardcoded APK signature / dex / so digests used by the anti-spoof `mode`
-// fingerprint (from ChatCacheFingerprint).
+// APK signature / dex / so digests for the anti-spoof `mode` fingerprint
+// (from ChatCacheFingerprint)
 const SIGNATURE_DIGEST: &str =
     "1684414033eb263e2c615f8b7df5ed8793850a07656304997fbf07e9e21e1e93";
 const SO_DIGEST: &str = "90e2fb8745b17b42a10182f8d8ac590e3fca5b311e2ce2d5144fa2c18cb3090d";
@@ -82,7 +78,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .calls_seed
         .ok_or("server did not return callsSeed in handshake")?;
 
-    // Build the authRequest payload, including the anti-spoof `mode` fingerprint.
     let mode = compute_mode(calls_seed, &device_id);
     let request = Value::Map(vec![
         (Value::from("phone"), Value::from(phone.clone())),
@@ -103,7 +98,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token = map_str(&payload, "token").ok_or("no token in authRequest response")?;
     println!("✓ code sent. temp token = {token}");
 
-    // Verify the code the user received.
     print!("Enter the SMS code (blank to skip): ");
     use std::io::Write;
     std::io::stdout().flush().ok();
@@ -142,8 +136,8 @@ fn mask_phone(phone: &str) -> String {
     format!("{}***{}", &phone[..3], &phone[phone.len() - 2..])
 }
 
-/// The `mode` anti-spoof fingerprint: three SHA-256 hashes of
-/// (digest || int64_be(callsSeed) || utf8(deviceId)) concatenated — 96 bytes.
+// three SHA-256 hashes of (digest || int64_be(callsSeed) || utf8(deviceId)),
+// concatenated to 96 bytes
 fn compute_mode(calls_seed: i64, device_id: &str) -> Vec<u8> {
     let seed = calls_seed.to_be_bytes();
     let dev = device_id.as_bytes();

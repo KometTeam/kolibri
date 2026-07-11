@@ -1,10 +1,10 @@
-/// Wire header layout (10 bytes, big-endian):
+/// Wire header, 10 bytes big-endian:
 ///
 /// ```text
-/// [0]      ver       protocol version (u8, default 10)
-/// [1]      cmd       command type (u8)
-/// [2..4]   seq       sequence number (u16 BE)
-/// [4..6]   opcode    operation code (u16 BE)
+/// [0]      ver       protocol version (default 10)
+/// [1]      cmd       command type
+/// [2..4]   seq       sequence number
+/// [4..6]   opcode    operation code
 /// [6..10]  packedLen high byte = compression flag, low 24 bits = payload length
 /// [10..]   payload   MessagePack, optionally compressed
 /// ```
@@ -12,8 +12,7 @@ pub const HEADER_SIZE: usize = 10;
 
 pub const PROTOCOL_VERSION: u8 = 10;
 
-/// Command types. Direction decides the meaning of `REQUEST` (client request vs
-/// server push both carry cmd == 0).
+/// Request and push both carry cmd == 0; direction disambiguates.
 pub mod cmd {
     pub const REQUEST: u8 = 0;
     pub const PUSH: u8 = 0;
@@ -22,10 +21,9 @@ pub mod cmd {
     pub const ERROR: u8 = 3;
 }
 
-/// A decoded protocol packet. `payload` holds the decompressed MessagePack
-/// bytes (empty when the packet has no body). Decoding into a concrete value is
-/// left to the caller via [`Packet::value`] so the core stays representation
-/// agnostic (Dart Map, Python dict, Rust struct — all from the same bytes).
+/// Decoded packet. `payload` is decompressed MessagePack bytes (empty for no
+/// body); the caller turns it into a concrete value via [`Packet::value`], so
+/// the core stays representation-agnostic.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Packet {
     pub ver: u8,
@@ -48,14 +46,12 @@ impl Packet {
         self.cmd == cmd::NOT_FOUND
     }
 
-    /// A push arrives with cmd == 0 (same as an outgoing request); only
-    /// meaningful for incoming packets.
+    /// Push has cmd == 0 like an outgoing request; only meaningful on inbound.
     pub fn is_push(&self) -> bool {
         self.cmd == cmd::PUSH
     }
 
-    /// Decode the payload into a dynamic MessagePack value. Returns
-    /// `Ok(Value::Nil)` for an empty payload.
+    /// Empty payload decodes to `Value::Nil`.
     pub fn value(&self) -> Result<rmpv::Value, rmpv::decode::Error> {
         if self.payload.is_empty() {
             return Ok(rmpv::Value::Nil);

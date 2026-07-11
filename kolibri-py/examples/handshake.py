@@ -1,5 +1,4 @@
-"""Connect to the real Komet/oneme server and run the sessionInit handshake.
-Sends no SMS. Proves the Python binding works end-to-end.
+"""sessionInit handshake against the real server, no SMS.
 
     python examples/handshake.py
 """

@@ -1,5 +1,4 @@
-//! Verify an OTP code against the real server, using the temp token printed by
-//! the `auth_request` example.
+//! Verify an OTP code using the temp token from the `auth_request` example.
 //!
 //!     cargo run --example auth_verify -- <TOKEN> <CODE>
 

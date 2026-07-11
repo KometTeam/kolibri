@@ -2,7 +2,7 @@ use super::compress::{self, CompressError};
 use super::packet::{cmd, Packet, HEADER_SIZE, PROTOCOL_VERSION};
 use thiserror::Error;
 
-/// Payloads smaller than this are sent uncompressed (matches the Dart client).
+/// Payloads below this go out uncompressed.
 pub const COMPRESSION_THRESHOLD: usize = 32;
 
 #[derive(Debug, Error)]
@@ -15,19 +15,15 @@ pub enum CodecError {
     Compress(#[from] CompressError),
 }
 
-/// Encode a request packet: `payload` is already-serialized MessagePack bytes.
-///
-/// Payloads of at least [`COMPRESSION_THRESHOLD`] bytes are LZ4-frame
-/// compressed; the header flag byte carries `(raw_len / comp_len) + 1` (a size
-/// multiplier hint), otherwise 0 for uncompressed — bit-for-bit the Dart
-/// `packPacket` layout.
+/// `payload` is already-serialized MessagePack. Payloads >= threshold get LZ4
+/// compressed and the header flag byte carries `(raw_len / comp_len) + 1` as a
+/// size hint, else 0.
 pub fn encode(opcode: u16, payload: &[u8], seq: u16) -> Vec<u8> {
     encode_with_cmd(cmd::REQUEST, opcode, payload, seq)
 }
 
-/// Encode a packet with an explicit command byte. The client only ever sends
-/// [`cmd::REQUEST`]; this exists for server-side / test construction of ok,
-/// error, not-found responses and pushes.
+/// Explicit command byte. The client only sends [`cmd::REQUEST`]; this is for
+/// building ok/error/not-found responses and pushes in tests / server code.
 pub fn encode_with_cmd(cmd: u8, opcode: u16, payload: &[u8], seq: u16) -> Vec<u8> {
     let (body, flag): (Vec<u8>, u8) = if payload.len() < COMPRESSION_THRESHOLD {
         (payload.to_vec(), 0)
@@ -48,9 +44,8 @@ pub fn encode_with_cmd(cmd: u8, opcode: u16, payload: &[u8], seq: u16) -> Vec<u8
     out
 }
 
-/// Read the declared total length (header + payload) of the packet whose header
-/// begins at `buf[0]`. Returns `None` if fewer than [`HEADER_SIZE`] bytes are
-/// available.
+/// Declared total length (header + payload) for the packet starting at `buf[0]`,
+/// or `None` if fewer than [`HEADER_SIZE`] bytes are available.
 pub fn packet_total_len(buf: &[u8]) -> Option<usize> {
     if buf.len() < HEADER_SIZE {
         return None;
@@ -60,8 +55,7 @@ pub fn packet_total_len(buf: &[u8]) -> Option<usize> {
     Some(HEADER_SIZE + payload_len)
 }
 
-/// Decode a single complete packet buffer (header + full payload) into a
-/// [`Packet`], decompressing the payload when the header flag is set.
+/// Decode one complete packet buffer, decompressing when the header flag is set.
 pub fn decode(buf: &[u8]) -> Result<Packet, CodecError> {
     if buf.len() < HEADER_SIZE {
         return Err(CodecError::ShortHeader(buf.len()));

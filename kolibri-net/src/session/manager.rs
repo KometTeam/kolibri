@@ -14,7 +14,6 @@ use crate::transport::{Client, TransportError};
 
 const PUSH_CHANNEL_CAPACITY: usize = 256;
 
-/// The lifecycle of a session, mirroring the Dart `SessionState`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SessionState {
     Disconnected,
@@ -23,8 +22,8 @@ pub enum SessionState {
     Online,
 }
 
-/// Useful fields parsed from the sessionInit response. The full payload is kept
-/// for the host to parse anything else (e.g. `reg-country-code`, `location`).
+/// Fields parsed from the sessionInit response; `payload` keeps the raw map so
+/// the host can pull anything else (`reg-country-code`, `location`, ...).
 #[derive(Debug, Clone)]
 pub struct HandshakeInfo {
     pub calls_seed: Option<i64>,
@@ -64,9 +63,8 @@ impl Shared {
     }
 }
 
-/// A managed session: connects, performs the handshake, keeps the connection
-/// alive with pings, and (optionally) reconnects with exponential backoff after
-/// an unexpected disconnect. Requests and pushes route through whichever
+/// Managed session: connects, handshakes, keeps alive with pings, and optionally
+/// reconnects with backoff. Requests and pushes route through whichever
 /// underlying [`Client`] is currently connected.
 pub struct Session {
     shared: Arc<Shared>,
@@ -89,10 +87,9 @@ impl Session {
         }
     }
 
-    /// Connect and perform the first handshake. Resolves with [`HandshakeInfo`]
-    /// once the session is online. If the first attempt fails and
-    /// `auto_reconnect` is set, the supervisor keeps retrying in the background
-    /// (and this call still returns the first error).
+    /// Resolves once online. If the first attempt fails with `auto_reconnect`
+    /// set, the supervisor keeps retrying in the background but this call still
+    /// returns the first error.
     pub async fn connect(&self) -> Result<HandshakeInfo, TransportError> {
         self.shared.stop.store(false, Ordering::SeqCst);
         let (first_tx, first_rx) = oneshot::channel();
@@ -105,7 +102,6 @@ impl Session {
             .map_err(|_| TransportError::ConnectionClosed)?
     }
 
-    /// Send a request through the currently connected client.
     pub async fn request(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
         let client = self.shared.client.lock().unwrap().clone();
         match client {
@@ -114,7 +110,6 @@ impl Session {
         }
     }
 
-    /// Fire-and-forget send through the currently connected client.
     pub fn send(&self, opcode: u16, payload: &[u8]) -> Result<u16, TransportError> {
         let client = self.shared.client.lock().unwrap().clone();
         match client {
@@ -123,8 +118,7 @@ impl Session {
         }
     }
 
-    /// Subscribe to server pushes. The stream survives reconnects — pushes from
-    /// every underlying connection are forwarded here.
+    /// Stream survives reconnects; pushes from every underlying connection land here.
     pub fn subscribe(&self) -> broadcast::Receiver<Packet> {
         self.shared.push_tx.subscribe()
     }
@@ -133,12 +127,11 @@ impl Session {
         *self.shared.state_tx.borrow()
     }
 
-    /// Watch session-state transitions.
     pub fn subscribe_state(&self) -> watch::Receiver<SessionState> {
         self.shared.state_tx.subscribe()
     }
 
-    /// Stop the session and disable auto-reconnect.
+    /// Stop and disable auto-reconnect.
     pub fn disconnect(&self) {
         self.shared.stop.store(true, Ordering::SeqCst);
         if let Some(client) = self.shared.client.lock().unwrap().take() {
@@ -157,7 +150,7 @@ impl Drop for Session {
     }
 }
 
-/// Supervisor loop: connect → handshake → maintain → (backoff) reconnect.
+/// Supervisor loop: connect, handshake, maintain, backoff, reconnect.
 async fn supervise(
     shared: Arc<Shared>,
     first_tx: oneshot::Sender<Result<HandshakeInfo, TransportError>>,
@@ -203,7 +196,6 @@ async fn supervise(
     }
 }
 
-/// Open a client and run the sessionInit handshake.
 async fn connect_and_handshake(
     shared: &Shared,
 ) -> Result<(Arc<Client>, HandshakeInfo), TransportError> {
@@ -221,8 +213,8 @@ async fn connect_and_handshake(
     Ok((client, info))
 }
 
-/// While online: send an immediate ping, then ping on the interval, forward
-/// pushes into the session-wide channel, and return once the connection drops.
+/// Pings on the interval, forwards pushes into the session-wide channel, and
+/// returns once the connection drops.
 async fn maintain(shared: &Shared, client: Arc<Client>) {
     let ping_client = client.clone();
     let interval = shared.config.ping_interval;
@@ -261,8 +253,7 @@ async fn maintain(shared: &Shared, client: Arc<Client>) {
     client.close();
 }
 
-/// Reconnect delay by attempt, matching the Dart `_scheduleReconnect`:
-/// `(2 * 2^min(attempt,3)).clamp(2, 15)` → 2, 4, 8, 15, 15, …
+/// `(2 * 2^min(attempt,3)).clamp(2, 15)` => 2, 4, 8, 15, 15, ...
 fn reconnect_delay(attempt: u32) -> Duration {
     let shift = attempt.min(3);
     let secs = (2u64 * (1u64 << shift)).clamp(2, 15);

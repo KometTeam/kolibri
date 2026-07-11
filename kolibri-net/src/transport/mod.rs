@@ -1,12 +1,10 @@
-//! Async transport: a persistent TLS TCP connection with request/response
-//! multiplexing over sequence numbers and a broadcast stream of server pushes.
-//! Built on tokio + rustls; sits directly on top of the pure [`crate::protocol`]
-//! codec.
+//! Persistent TLS connection with seq-multiplexed request/response and a
+//! broadcast stream of server pushes. tokio + rustls over the protocol codec.
 
 mod client;
 mod dispatcher;
 mod error;
-mod tls;
+pub(crate) mod tls;
 
 pub use client::{Client, ClientConfig};
 pub use error::TransportError;

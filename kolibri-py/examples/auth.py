@@ -1,19 +1,16 @@
-"""Full phone-auth flow against the real server, from Python.
+"""Full phone-auth flow: sends a REAL SMS, then verifies the code.
 
     python examples/auth.py +7XXXXXXXXXX
-
-Sends a REAL SMS to the given number, then prompts for the code and verifies it,
-printing the LOGIN token + profile the server returns.
 """
 
 import sys
 import kolibri
 
-# Opcodes (see kolibri-net protocol::opcodes)
+# opcodes, see kolibri-net protocol::opcodes
 AUTH_REQUEST = 17
 AUTH = 18
 
-# The device_id used for the handshake AND the anti-spoof fingerprint must match.
+# device_id must match between the handshake and the anti-spoof fingerprint
 DEVICE_ID = "kolibri-rs-device"
 
 if len(sys.argv) < 2:
