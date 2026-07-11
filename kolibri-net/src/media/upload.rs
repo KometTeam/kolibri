@@ -5,18 +5,18 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use super::http::{self, HttpResponse, ParsedUrl};
 use super::{MediaError, ProgressFn};
 
-const USER_AGENT: &str =
-    "OKMessages/26.14.1 (Android 11; TECNO MOBILE LIMITED TECNO LE7n; xxhdpi 480dpi 1080x2208)";
-
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Single POST with a `Content-Range` covering the whole body. status 200 = ok.
+/// `user_agent` should be built from the handshake device (see
+/// `UserAgent::http_user_agent`).
 pub async fn upload_file(
     url: &str,
     data: &[u8],
     filename: &str,
     insecure: bool,
     progress: Option<ProgressFn>,
+    user_agent: &str,
 ) -> Result<HttpResponse, MediaError> {
     let parsed = ParsedUrl::parse(url)?;
     let total = data.len() as u64;
@@ -31,7 +31,10 @@ pub async fn upload_file(
             format!("attachment; filename={filename}"),
         ),
         ("Connection", "keep-alive".to_string()),
-        ("User-Agent", percent_encode(USER_AGENT)),
+        (
+            "User-Agent",
+            percent_encode(user_agent),
+        ),
         (
             "Content-Range",
             format!("bytes 0-{}/{}", total.saturating_sub(1), total),
@@ -52,12 +55,14 @@ pub async fn upload_file(
 }
 
 /// `multipart/form-data`; caller extracts `photoToken` from the JSON body.
+/// `user_agent` should be built from the handshake device.
 pub async fn upload_photo(
     url: &str,
     data: &[u8],
     filename: &str,
     insecure: bool,
     progress: Option<ProgressFn>,
+    user_agent: &str,
 ) -> Result<HttpResponse, MediaError> {
     let parsed = ParsedUrl::parse(url)?;
     let boundary = format!("----KolibriBoundary{}", now_micros());
@@ -81,7 +86,10 @@ pub async fn upload_photo(
         ),
         ("Content-Length", total.to_string()),
         ("Connection", "keep-alive".to_string()),
-        ("User-Agent", percent_encode(USER_AGENT)),
+        (
+            "User-Agent",
+            percent_encode(user_agent),
+        ),
     ];
     http::request(
         &parsed,

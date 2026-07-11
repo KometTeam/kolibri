@@ -127,6 +127,12 @@ impl Session {
         *self.shared.state_tx.borrow()
     }
 
+    /// HTTP User-Agent for media uploads, derived from this session's handshake
+    /// device (opcode 6) so uploads look like the same device.
+    pub fn http_user_agent(&self) -> String {
+        self.shared.config.handshake.user_agent.http_user_agent()
+    }
+
     pub fn subscribe_state(&self) -> watch::Receiver<SessionState> {
         self.shared.state_tx.subscribe()
     }

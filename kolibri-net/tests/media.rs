@@ -74,7 +74,7 @@ async fn upload_file_posts_body_with_content_range() {
 
     let data = vec![0xAB; 5000];
     let url = format!("http://127.0.0.1:{}/upload", addr.port());
-    let resp = upload_file(&url, &data, "clip.bin", false, None)
+    let resp = upload_file(&url, &data, "clip.bin", false, None, "test-ua")
         .await
         .unwrap();
 

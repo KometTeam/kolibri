@@ -6,6 +6,7 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/calls.dart';
 import 'api/session.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -21,6 +22,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_CallSignalingPtr => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling;
+
+  CrossPlatformFinalizerArg
       get rust_arc_decrement_strong_count_KolibriSessionPtr => wire
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession;
 
@@ -28,8 +33,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
   @protected
+  CallSignaling
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          dynamic raw);
+
+  @protected
   KolibriSession
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+          dynamic raw);
+
+  @protected
+  CallSignaling
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
           dynamic raw);
 
   @protected
@@ -38,9 +53,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           dynamic raw);
 
   @protected
+  CallSignaling
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          dynamic raw);
+
+  @protected
   KolibriSession
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           dynamic raw);
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
 
   @protected
   RustStreamSink<PushEvent> dco_decode_StreamSink_push_event_Sse(dynamic raw);
@@ -56,16 +79,40 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  CallParams dco_decode_box_autoadd_call_params(dynamic raw);
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
   SessionOptions dco_decode_box_autoadd_session_options(dynamic raw);
 
   @protected
+  TransmittedData dco_decode_box_autoadd_transmitted_data(dynamic raw);
+
+  @protected
+  CallParams dco_decode_call_params(dynamic raw);
+
+  @protected
+  ConnectionInfo dco_decode_connection_info(dynamic raw);
+
+  @protected
   HandshakeInfo dco_decode_handshake_info(dynamic raw);
 
   @protected
   PlatformInt64 dco_decode_i_64(dynamic raw);
+
+  @protected
+  IceServer dco_decode_ice_server(dynamic raw);
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<IceServer> dco_decode_list_ice_server(dynamic raw);
+
+  @protected
+  Int64List dco_decode_list_prim_i_64_strict(dynamic raw);
 
   @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
@@ -77,13 +124,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
+  CallParams? dco_decode_opt_box_autoadd_call_params(dynamic raw);
+
+  @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  TransmittedData? dco_decode_opt_box_autoadd_transmitted_data(dynamic raw);
 
   @protected
   PushEvent dco_decode_push_event(dynamic raw);
 
   @protected
   SessionOptions dco_decode_session_options(dynamic raw);
+
+  @protected
+  TransmittedData dco_decode_transmitted_data(dynamic raw);
 
   @protected
   int dco_decode_u_16(dynamic raw);
@@ -110,8 +166,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  CallSignaling
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          SseDeserializer deserializer);
+
+  @protected
   KolibriSession
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+          SseDeserializer deserializer);
+
+  @protected
+  CallSignaling
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
           SseDeserializer deserializer);
 
   @protected
@@ -120,9 +186,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
+  CallSignaling
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          SseDeserializer deserializer);
+
+  @protected
   KolibriSession
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+      SseDeserializer deserializer);
 
   @protected
   RustStreamSink<PushEvent> sse_decode_StreamSink_push_event_Sse(
@@ -139,6 +214,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  CallParams sse_decode_box_autoadd_call_params(SseDeserializer deserializer);
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
@@ -146,10 +224,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  TransmittedData sse_decode_box_autoadd_transmitted_data(
+      SseDeserializer deserializer);
+
+  @protected
+  CallParams sse_decode_call_params(SseDeserializer deserializer);
+
+  @protected
+  ConnectionInfo sse_decode_connection_info(SseDeserializer deserializer);
+
+  @protected
   HandshakeInfo sse_decode_handshake_info(SseDeserializer deserializer);
 
   @protected
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+
+  @protected
+  IceServer sse_decode_ice_server(SseDeserializer deserializer);
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<IceServer> sse_decode_list_ice_server(SseDeserializer deserializer);
+
+  @protected
+  Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer);
 
   @protected
   List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
@@ -161,13 +261,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
+  CallParams? sse_decode_opt_box_autoadd_call_params(
+      SseDeserializer deserializer);
+
+  @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  TransmittedData? sse_decode_opt_box_autoadd_transmitted_data(
+      SseDeserializer deserializer);
 
   @protected
   PushEvent sse_decode_push_event(SseDeserializer deserializer);
 
   @protected
   SessionOptions sse_decode_session_options(SseDeserializer deserializer);
+
+  @protected
+  TransmittedData sse_decode_transmitted_data(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_16(SseDeserializer deserializer);
@@ -199,8 +310,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          CallSignaling self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           KolibriSession self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          CallSignaling self, SseSerializer serializer);
 
   @protected
   void
@@ -209,8 +330,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          CallSignaling self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           KolibriSession self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+      RustStreamSink<String> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_push_event_Sse(
@@ -227,6 +357,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_call_params(
+      CallParams self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_i_64(
       PlatformInt64 self, SseSerializer serializer);
 
@@ -235,10 +369,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SessionOptions self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_transmitted_data(
+      TransmittedData self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_call_params(CallParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_connection_info(
+      ConnectionInfo self, SseSerializer serializer);
+
+  @protected
   void sse_encode_handshake_info(HandshakeInfo self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ice_server(IceServer self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_ice_server(
+      List<IceServer> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_prim_i_64_strict(
+      Int64List self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
@@ -251,8 +410,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_call_params(
+      CallParams? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_i_64(
       PlatformInt64? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_transmitted_data(
+      TransmittedData? self, SseSerializer serializer);
 
   @protected
   void sse_encode_push_event(PushEvent self, SseSerializer serializer);
@@ -260,6 +427,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_session_options(
       SessionOptions self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_transmitted_data(
+      TransmittedData self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_16(int self, SseSerializer serializer);
@@ -291,6 +462,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 class RustLibWire implements BaseWire {
   RustLibWire.fromExternalLibrary(ExternalLibrary lib);
 
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+              ptr);
+
   void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           int ptr) =>
       wasmModule
@@ -310,6 +493,14 @@ external RustLibWasmModule get wasmModule;
 @JS()
 @anonymous
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          int ptr);
+
   external void
       rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           int ptr);

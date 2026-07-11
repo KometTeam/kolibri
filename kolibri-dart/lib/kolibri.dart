@@ -18,6 +18,18 @@ export 'src/rust/api/session.dart'
         UploadEvent_Done,
         UploadEvent_Error;
 
+export 'src/rust/api/calls.dart'
+    show
+        CallSignaling,
+        CallParams,
+        IceServer,
+        ConnectionInfo,
+        TransmittedData,
+        decodeVcp,
+        connectCallSignaling,
+        parseConnection,
+        parseTransmittedData;
+
 bool _initialized = false;
 
 /// Load the native library and init the bindings; call once. On Flutter omit

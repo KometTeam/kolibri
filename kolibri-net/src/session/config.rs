@@ -19,6 +19,18 @@ pub struct UserAgent {
     pub device_locale: String,
 }
 
+impl UserAgent {
+    /// The CDN/HTTP User-Agent for media uploads, built from the same device
+    /// fields sent in the handshake (opcode 6) so both are consistent.
+    /// e.g. `OKMessages/26.20.2 (Android 14; Google Pixel 8; xxhdpi 420dpi 1080x2400)`
+    pub fn http_user_agent(&self) -> String {
+        format!(
+            "OKMessages/{} ({}; {}; {})",
+            self.app_version, self.os_version, self.device_name, self.screen
+        )
+    }
+}
+
 /// Everything needed to build the `sessionInit` (opcode 6) payload.
 #[derive(Debug, Clone)]
 pub struct HandshakeConfig {

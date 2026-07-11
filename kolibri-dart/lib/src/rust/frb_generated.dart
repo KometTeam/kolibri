@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/calls.dart';
 import 'api/session.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -68,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 762856598;
+  int get rustContentHash => 1090560112;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -80,6 +81,43 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<String> crateApiCallsCallSignalingAcceptCall(
+      {required CallSignaling that});
+
+  Future<String> crateApiCallsCallSignalingChangeMediaSettings(
+      {required CallSignaling that,
+      required bool audio,
+      required bool video,
+      required bool screen});
+
+  void crateApiCallsCallSignalingClose({required CallSignaling that});
+
+  Future<String> crateApiCallsCallSignalingHangup(
+      {required CallSignaling that, required String reason});
+
+  bool crateApiCallsCallSignalingIsConnected({required CallSignaling that});
+
+  Stream<String> crateApiCallsCallSignalingNotifications(
+      {required CallSignaling that});
+
+  Future<String> crateApiCallsCallSignalingSendCommand(
+      {required CallSignaling that,
+      required String command,
+      required String extraJson});
+
+  Future<String> crateApiCallsCallSignalingTransmitCandidate(
+      {required CallSignaling that,
+      required PlatformInt64 participantId,
+      required String candidate,
+      required String sdpMid,
+      required PlatformInt64 sdpMlineIndex});
+
+  Future<String> crateApiCallsCallSignalingTransmitSdp(
+      {required CallSignaling that,
+      required PlatformInt64 participantId,
+      required String sdpType,
+      required String sdp});
+
   Future<HandshakeInfo> crateApiSessionKolibriSessionConnect(
       {required KolibriSession that});
 
@@ -107,13 +145,15 @@ abstract class RustLibApi extends BaseApi {
       {required KolibriSession that,
       required String url,
       required List<int> data,
-      required String filename});
+      required String filename,
+      String? userAgent});
 
   Stream<UploadEvent> crateApiSessionKolibriSessionUploadPhoto(
       {required KolibriSession that,
       required String url,
       required List<int> data,
-      required String filename});
+      required String filename,
+      String? userAgent});
 
   Stream<UploadEvent> crateApiSessionKolibriSessionUploadVideo(
       {required KolibriSession that,
@@ -128,6 +168,27 @@ abstract class RustLibApi extends BaseApi {
       required List<int> so,
       required PlatformInt64 callsSeed,
       required String deviceId});
+
+  Future<CallSignaling> crateApiCallsConnectCallSignaling(
+      {required String url, String? userAgent});
+
+  CallParams? crateApiCallsDecodeVcp(
+      {required String vcp, required String conversationId});
+
+  ConnectionInfo crateApiCallsParseConnection(
+      {required String notificationJson, required PlatformInt64 myUserId});
+
+  TransmittedData? crateApiCallsParseTransmittedData(
+      {required String notificationJson});
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_CallSignaling;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_CallSignaling;
+
+  CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_CallSignalingPtr;
 
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_KolibriSession;
@@ -148,6 +209,279 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<String> crateApiCallsCallSignalingAcceptCall(
+      {required CallSignaling that}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 1, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsCallSignalingAcceptCallConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingAcceptCallConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_accept_call",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<String> crateApiCallsCallSignalingChangeMediaSettings(
+      {required CallSignaling that,
+      required bool audio,
+      required bool video,
+      required bool screen}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        sse_encode_bool(audio, serializer);
+        sse_encode_bool(video, serializer);
+        sse_encode_bool(screen, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 2, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsCallSignalingChangeMediaSettingsConstMeta,
+      argValues: [that, audio, video, screen],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingChangeMediaSettingsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_change_media_settings",
+        argNames: ["that", "audio", "video", "screen"],
+      );
+
+  @override
+  void crateApiCallsCallSignalingClose({required CallSignaling that}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiCallsCallSignalingCloseConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<String> crateApiCallsCallSignalingHangup(
+      {required CallSignaling that, required String reason}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        sse_encode_String(reason, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 4, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsCallSignalingHangupConstMeta,
+      argValues: [that, reason],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingHangupConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_hangup",
+        argNames: ["that", "reason"],
+      );
+
+  @override
+  bool crateApiCallsCallSignalingIsConnected({required CallSignaling that}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiCallsCallSignalingIsConnectedConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingIsConnectedConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_is_connected",
+        argNames: ["that"],
+      );
+
+  @override
+  Stream<String> crateApiCallsCallSignalingNotifications(
+      {required CallSignaling that}) {
+    final sink = RustStreamSink<String>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        sse_encode_StreamSink_String_Sse(sink, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 6, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiCallsCallSignalingNotificationsConstMeta,
+      argValues: [that, sink],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingNotificationsConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_notifications",
+        argNames: ["that", "sink"],
+      );
+
+  @override
+  Future<String> crateApiCallsCallSignalingSendCommand(
+      {required CallSignaling that,
+      required String command,
+      required String extraJson}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        sse_encode_String(command, serializer);
+        sse_encode_String(extraJson, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 7, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsCallSignalingSendCommandConstMeta,
+      argValues: [that, command, extraJson],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingSendCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_send_command",
+        argNames: ["that", "command", "extraJson"],
+      );
+
+  @override
+  Future<String> crateApiCallsCallSignalingTransmitCandidate(
+      {required CallSignaling that,
+      required PlatformInt64 participantId,
+      required String candidate,
+      required String sdpMid,
+      required PlatformInt64 sdpMlineIndex}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        sse_encode_i_64(participantId, serializer);
+        sse_encode_String(candidate, serializer);
+        sse_encode_String(sdpMid, serializer);
+        sse_encode_i_64(sdpMlineIndex, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 8, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsCallSignalingTransmitCandidateConstMeta,
+      argValues: [that, participantId, candidate, sdpMid, sdpMlineIndex],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingTransmitCandidateConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_transmit_candidate",
+        argNames: [
+          "that",
+          "participantId",
+          "candidate",
+          "sdpMid",
+          "sdpMlineIndex"
+        ],
+      );
+
+  @override
+  Future<String> crateApiCallsCallSignalingTransmitSdp(
+      {required CallSignaling that,
+      required PlatformInt64 participantId,
+      required String sdpType,
+      required String sdp}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+            that, serializer);
+        sse_encode_i_64(participantId, serializer);
+        sse_encode_String(sdpType, serializer);
+        sse_encode_String(sdp, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 9, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsCallSignalingTransmitSdpConstMeta,
+      argValues: [that, participantId, sdpType, sdp],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsCallSignalingTransmitSdpConstMeta =>
+      const TaskConstMeta(
+        debugName: "CallSignaling_transmit_sdp",
+        argNames: ["that", "participantId", "sdpType", "sdp"],
+      );
+
+  @override
   Future<HandshakeInfo> crateApiSessionKolibriSessionConnect(
       {required KolibriSession that}) {
     return handler.executeNormal(NormalTask(
@@ -156,7 +490,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
             that, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 1, port: port_);
+            funcId: 10, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_handshake_info,
@@ -181,7 +515,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
             that, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -206,7 +540,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_session_options(options, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -236,7 +570,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that, serializer);
         sse_encode_StreamSink_push_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 4, port: port_);
+            funcId: 13, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -268,7 +602,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_16(opcode, serializer);
         sse_encode_list_prim_u_8_loose(payload, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 5, port: port_);
+            funcId: 14, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -298,7 +632,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that, serializer);
         sse_encode_u_16(opcode, serializer);
         sse_encode_list_prim_u_8_loose(payload, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_u_32,
@@ -323,7 +657,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
             that, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -346,7 +680,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       {required KolibriSession that,
       required String url,
       required List<int> data,
-      required String filename}) {
+      required String filename,
+      String? userAgent}) {
     final sink = RustStreamSink<UploadEvent>();
     unawaited(handler.executeNormal(NormalTask(
       callFfi: (port_) {
@@ -356,16 +691,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(url, serializer);
         sse_encode_list_prim_u_8_loose(data, serializer);
         sse_encode_String(filename, serializer);
+        sse_encode_opt_String(userAgent, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 8, port: port_);
+            funcId: 17, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
         decodeErrorData: null,
       ),
       constMeta: kCrateApiSessionKolibriSessionUploadFileConstMeta,
-      argValues: [that, url, data, filename, sink],
+      argValues: [that, url, data, filename, userAgent, sink],
       apiImpl: this,
     )));
     return sink.stream;
@@ -374,7 +710,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSessionKolibriSessionUploadFileConstMeta =>
       const TaskConstMeta(
         debugName: "KolibriSession_upload_file",
-        argNames: ["that", "url", "data", "filename", "sink"],
+        argNames: ["that", "url", "data", "filename", "userAgent", "sink"],
       );
 
   @override
@@ -382,7 +718,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       {required KolibriSession that,
       required String url,
       required List<int> data,
-      required String filename}) {
+      required String filename,
+      String? userAgent}) {
     final sink = RustStreamSink<UploadEvent>();
     unawaited(handler.executeNormal(NormalTask(
       callFfi: (port_) {
@@ -392,16 +729,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(url, serializer);
         sse_encode_list_prim_u_8_loose(data, serializer);
         sse_encode_String(filename, serializer);
+        sse_encode_opt_String(userAgent, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 9, port: port_);
+            funcId: 18, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
         decodeErrorData: null,
       ),
       constMeta: kCrateApiSessionKolibriSessionUploadPhotoConstMeta,
-      argValues: [that, url, data, filename, sink],
+      argValues: [that, url, data, filename, userAgent, sink],
       apiImpl: this,
     )));
     return sink.stream;
@@ -410,7 +748,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSessionKolibriSessionUploadPhotoConstMeta =>
       const TaskConstMeta(
         debugName: "KolibriSession_upload_photo",
-        argNames: ["that", "url", "data", "filename", "sink"],
+        argNames: ["that", "url", "data", "filename", "userAgent", "sink"],
       );
 
   @override
@@ -432,7 +770,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_32(concurrency, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 10, port: port_);
+            funcId: 19, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -466,7 +804,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_list_prim_u_8_loose(so, serializer);
         sse_encode_i_64(callsSeed, serializer);
         sse_encode_String(deviceId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -483,6 +821,118 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["signature", "dex", "so", "callsSeed", "deviceId"],
       );
 
+  @override
+  Future<CallSignaling> crateApiCallsConnectCallSignaling(
+      {required String url, String? userAgent}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(url, serializer);
+        sse_encode_opt_String(userAgent, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 21, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData:
+            sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiCallsConnectCallSignalingConstMeta,
+      argValues: [url, userAgent],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsConnectCallSignalingConstMeta =>
+      const TaskConstMeta(
+        debugName: "connect_call_signaling",
+        argNames: ["url", "userAgent"],
+      );
+
+  @override
+  CallParams? crateApiCallsDecodeVcp(
+      {required String vcp, required String conversationId}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(vcp, serializer);
+        sse_encode_String(conversationId, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_opt_box_autoadd_call_params,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiCallsDecodeVcpConstMeta,
+      argValues: [vcp, conversationId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsDecodeVcpConstMeta => const TaskConstMeta(
+        debugName: "decode_vcp",
+        argNames: ["vcp", "conversationId"],
+      );
+
+  @override
+  ConnectionInfo crateApiCallsParseConnection(
+      {required String notificationJson, required PlatformInt64 myUserId}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(notificationJson, serializer);
+        sse_encode_i_64(myUserId, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_connection_info,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiCallsParseConnectionConstMeta,
+      argValues: [notificationJson, myUserId],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsParseConnectionConstMeta =>
+      const TaskConstMeta(
+        debugName: "parse_connection",
+        argNames: ["notificationJson", "myUserId"],
+      );
+
+  @override
+  TransmittedData? crateApiCallsParseTransmittedData(
+      {required String notificationJson}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(notificationJson, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_opt_box_autoadd_transmitted_data,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiCallsParseTransmittedDataConstMeta,
+      argValues: [notificationJson],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiCallsParseTransmittedDataConstMeta =>
+      const TaskConstMeta(
+        debugName: "parse_transmitted_data",
+        argNames: ["notificationJson"],
+      );
+
+  RustArcIncrementStrongCountFnType
+      get rust_arc_increment_strong_count_CallSignaling => wire
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling;
+
+  RustArcDecrementStrongCountFnType
+      get rust_arc_decrement_strong_count_CallSignaling => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling;
+
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_KolibriSession => wire
           .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession;
@@ -498,11 +948,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallSignaling
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CallSignalingImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   KolibriSession
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return KolibriSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  CallSignaling
+      dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CallSignalingImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -514,11 +980,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallSignaling
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CallSignalingImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   KolibriSession
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return KolibriSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
   }
 
   @protected
@@ -547,6 +1027,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallParams dco_decode_box_autoadd_call_params(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_call_params(raw);
+  }
+
+  @protected
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_i_64(raw);
@@ -556,6 +1042,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionOptions dco_decode_box_autoadd_session_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_session_options(raw);
+  }
+
+  @protected
+  TransmittedData dco_decode_box_autoadd_transmitted_data(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_transmitted_data(raw);
+  }
+
+  @protected
+  CallParams dco_decode_call_params(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return CallParams(
+      token: dco_decode_String(arr[0]),
+      wsEndpoint: dco_decode_String(arr[1]),
+      stun: dco_decode_opt_String(arr[2]),
+      turn: dco_decode_list_String(arr[3]),
+      turnUser: dco_decode_opt_String(arr[4]),
+      turnPassword: dco_decode_opt_String(arr[5]),
+      isVideo: dco_decode_bool(arr[6]),
+      userId: dco_decode_i_64(arr[7]),
+      iceServers: dco_decode_list_ice_server(arr[8]),
+      ws2Url: dco_decode_String(arr[9]),
+    );
+  }
+
+  @protected
+  ConnectionInfo dco_decode_connection_info(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ConnectionInfo(
+      topology: dco_decode_opt_String(arr[0]),
+      isSfu: dco_decode_bool(arr[1]),
+      participants: dco_decode_list_prim_i_64_strict(arr[2]),
+      peer: dco_decode_opt_box_autoadd_i_64(arr[3]),
+      iceServers: dco_decode_list_ice_server(arr[4]),
+    );
   }
 
   @protected
@@ -578,6 +1105,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  IceServer dco_decode_ice_server(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return IceServer(
+      urls: dco_decode_list_String(arr[0]),
+      username: dco_decode_opt_String(arr[1]),
+      credential: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<IceServer> dco_decode_list_ice_server(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ice_server).toList();
+  }
+
+  @protected
+  Int64List dco_decode_list_prim_i_64_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeInt64List(raw);
+  }
+
+  @protected
   List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as List<int>;
@@ -596,9 +1154,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallParams? dco_decode_opt_box_autoadd_call_params(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_call_params(raw);
+  }
+
+  @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_i_64(raw);
+  }
+
+  @protected
+  TransmittedData? dco_decode_opt_box_autoadd_transmitted_data(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_transmitted_data(raw);
   }
 
   @protected
@@ -639,6 +1209,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       pingIntervalSecs: dco_decode_u_64(arr[16]),
       autoReconnect: dco_decode_bool(arr[17]),
       insecureTls: dco_decode_bool(arr[18]),
+    );
+  }
+
+  @protected
+  TransmittedData dco_decode_transmitted_data(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return TransmittedData(
+      kind: dco_decode_String(arr[0]),
+      sdpType: dco_decode_opt_String(arr[1]),
+      sdp: dco_decode_opt_String(arr[2]),
+      candidate: dco_decode_opt_String(arr[3]),
+      sdpMid: dco_decode_opt_String(arr[4]),
+      sdpMlineIndex: dco_decode_opt_box_autoadd_i_64(arr[5]),
     );
   }
 
@@ -709,11 +1295,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallSignaling
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CallSignalingImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
   KolibriSession
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return KolibriSessionImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  CallSignaling
+      sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CallSignalingImpl.frbInternalSseDecode(
         sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
   }
 
@@ -727,12 +1331,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallSignaling
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return CallSignalingImpl.frbInternalSseDecode(
+        sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
   KolibriSession
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return KolibriSessionImpl.frbInternalSseDecode(
         sse_decode_usize(deserializer), sse_decode_i_32(deserializer));
+  }
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
   }
 
   @protected
@@ -763,6 +1383,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallParams sse_decode_box_autoadd_call_params(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_call_params(deserializer));
+  }
+
+  @protected
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_i_64(deserializer));
@@ -773,6 +1399,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_session_options(deserializer));
+  }
+
+  @protected
+  TransmittedData sse_decode_box_autoadd_transmitted_data(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_transmitted_data(deserializer));
+  }
+
+  @protected
+  CallParams sse_decode_call_params(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_token = sse_decode_String(deserializer);
+    var var_wsEndpoint = sse_decode_String(deserializer);
+    var var_stun = sse_decode_opt_String(deserializer);
+    var var_turn = sse_decode_list_String(deserializer);
+    var var_turnUser = sse_decode_opt_String(deserializer);
+    var var_turnPassword = sse_decode_opt_String(deserializer);
+    var var_isVideo = sse_decode_bool(deserializer);
+    var var_userId = sse_decode_i_64(deserializer);
+    var var_iceServers = sse_decode_list_ice_server(deserializer);
+    var var_ws2Url = sse_decode_String(deserializer);
+    return CallParams(
+        token: var_token,
+        wsEndpoint: var_wsEndpoint,
+        stun: var_stun,
+        turn: var_turn,
+        turnUser: var_turnUser,
+        turnPassword: var_turnPassword,
+        isVideo: var_isVideo,
+        userId: var_userId,
+        iceServers: var_iceServers,
+        ws2Url: var_ws2Url);
+  }
+
+  @protected
+  ConnectionInfo sse_decode_connection_info(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_topology = sse_decode_opt_String(deserializer);
+    var var_isSfu = sse_decode_bool(deserializer);
+    var var_participants = sse_decode_list_prim_i_64_strict(deserializer);
+    var var_peer = sse_decode_opt_box_autoadd_i_64(deserializer);
+    var var_iceServers = sse_decode_list_ice_server(deserializer);
+    return ConnectionInfo(
+        topology: var_topology,
+        isSfu: var_isSfu,
+        participants: var_participants,
+        peer: var_peer,
+        iceServers: var_iceServers);
   }
 
   @protected
@@ -791,6 +1466,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getPlatformInt64();
+  }
+
+  @protected
+  IceServer sse_decode_ice_server(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_urls = sse_decode_list_String(deserializer);
+    var var_username = sse_decode_opt_String(deserializer);
+    var var_credential = sse_decode_opt_String(deserializer);
+    return IceServer(
+        urls: var_urls, username: var_username, credential: var_credential);
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<IceServer> sse_decode_list_ice_server(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <IceServer>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ice_server(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  Int64List sse_decode_list_prim_i_64_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getInt64List(len_);
   }
 
   @protected
@@ -819,11 +1535,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CallParams? sse_decode_opt_box_autoadd_call_params(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_call_params(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_i_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  TransmittedData? sse_decode_opt_box_autoadd_transmitted_data(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_transmitted_data(deserializer));
     } else {
       return null;
     }
@@ -879,6 +1619,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         pingIntervalSecs: var_pingIntervalSecs,
         autoReconnect: var_autoReconnect,
         insecureTls: var_insecureTls);
+  }
+
+  @protected
+  TransmittedData sse_decode_transmitted_data(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
+    var var_sdpType = sse_decode_opt_String(deserializer);
+    var var_sdp = sse_decode_opt_String(deserializer);
+    var var_candidate = sse_decode_opt_String(deserializer);
+    var var_sdpMid = sse_decode_opt_String(deserializer);
+    var var_sdpMlineIndex = sse_decode_opt_box_autoadd_i_64(deserializer);
+    return TransmittedData(
+        kind: var_kind,
+        sdpType: var_sdpType,
+        sdp: var_sdp,
+        candidate: var_candidate,
+        sdpMid: var_sdpMid,
+        sdpMlineIndex: var_sdpMlineIndex);
   }
 
   @protected
@@ -953,11 +1711,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          CallSignaling self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as CallSignalingImpl).frbInternalSseEncode(move: true),
+        serializer);
+  }
+
+  @protected
+  void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           KolibriSession self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
         (self as KolibriSessionImpl).frbInternalSseEncode(move: true),
+        serializer);
+  }
+
+  @protected
+  void
+      sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          CallSignaling self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as CallSignalingImpl).frbInternalSseEncode(move: false),
         serializer);
   }
 
@@ -973,11 +1751,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCallSignaling(
+          CallSignaling self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+        (self as CallSignalingImpl).frbInternalSseEncode(move: null),
+        serializer);
+  }
+
+  @protected
+  void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
           KolibriSession self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
         (self as KolibriSessionImpl).frbInternalSseEncode(move: null),
+        serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+      RustStreamSink<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+        self.setupAndSerialize(
+            codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        )),
         serializer);
   }
 
@@ -1020,6 +1821,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_call_params(
+      CallParams self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_call_params(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_i_64(
       PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1034,6 +1842,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_transmitted_data(
+      TransmittedData self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_transmitted_data(self, serializer);
+  }
+
+  @protected
+  void sse_encode_call_params(CallParams self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.token, serializer);
+    sse_encode_String(self.wsEndpoint, serializer);
+    sse_encode_opt_String(self.stun, serializer);
+    sse_encode_list_String(self.turn, serializer);
+    sse_encode_opt_String(self.turnUser, serializer);
+    sse_encode_opt_String(self.turnPassword, serializer);
+    sse_encode_bool(self.isVideo, serializer);
+    sse_encode_i_64(self.userId, serializer);
+    sse_encode_list_ice_server(self.iceServers, serializer);
+    sse_encode_String(self.ws2Url, serializer);
+  }
+
+  @protected
+  void sse_encode_connection_info(
+      ConnectionInfo self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.topology, serializer);
+    sse_encode_bool(self.isSfu, serializer);
+    sse_encode_list_prim_i_64_strict(self.participants, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.peer, serializer);
+    sse_encode_list_ice_server(self.iceServers, serializer);
+  }
+
+  @protected
   void sse_encode_handshake_info(HandshakeInfo self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_opt_box_autoadd_i_64(self.callsSeed, serializer);
@@ -1045,6 +1886,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putPlatformInt64(self);
+  }
+
+  @protected
+  void sse_encode_ice_server(IceServer self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_String(self.urls, serializer);
+    sse_encode_opt_String(self.username, serializer);
+    sse_encode_opt_String(self.credential, serializer);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ice_server(
+      List<IceServer> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ice_server(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_i_64_strict(
+      Int64List self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putInt64List(self);
   }
 
   @protected
@@ -1075,6 +1951,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_call_params(
+      CallParams? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_call_params(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_i_64(
       PlatformInt64? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -1082,6 +1969,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_i_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_transmitted_data(
+      TransmittedData? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_transmitted_data(self, serializer);
     }
   }
 
@@ -1115,6 +2013,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.pingIntervalSecs, serializer);
     sse_encode_bool(self.autoReconnect, serializer);
     sse_encode_bool(self.insecureTls, serializer);
+  }
+
+  @protected
+  void sse_encode_transmitted_data(
+      TransmittedData self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_String(self.sdpType, serializer);
+    sse_encode_opt_String(self.sdp, serializer);
+    sse_encode_opt_String(self.candidate, serializer);
+    sse_encode_opt_String(self.sdpMid, serializer);
+    sse_encode_opt_box_autoadd_i_64(self.sdpMlineIndex, serializer);
   }
 
   @protected
@@ -1178,6 +2088,79 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 }
 
 @sealed
+class CallSignalingImpl extends RustOpaque implements CallSignaling {
+  // Not to be used by end users
+  CallSignalingImpl.frbInternalDcoDecode(List<dynamic> wire)
+      : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  CallSignalingImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative)
+      : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_CallSignaling,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_CallSignaling,
+    rustArcDecrementStrongCountPtr:
+        RustLib.instance.api.rust_arc_decrement_strong_count_CallSignalingPtr,
+  );
+
+  Future<String> acceptCall() =>
+      RustLib.instance.api.crateApiCallsCallSignalingAcceptCall(
+        that: this,
+      );
+
+  Future<String> changeMediaSettings(
+          {required bool audio, required bool video, required bool screen}) =>
+      RustLib.instance.api.crateApiCallsCallSignalingChangeMediaSettings(
+          that: this, audio: audio, video: video, screen: screen);
+
+  void close() => RustLib.instance.api.crateApiCallsCallSignalingClose(
+        that: this,
+      );
+
+  Future<String> hangup({required String reason}) => RustLib.instance.api
+      .crateApiCallsCallSignalingHangup(that: this, reason: reason);
+
+  bool isConnected() =>
+      RustLib.instance.api.crateApiCallsCallSignalingIsConnected(
+        that: this,
+      );
+
+  /// Stream of ws2 notifications as JSON strings.
+  Stream<String> notifications() =>
+      RustLib.instance.api.crateApiCallsCallSignalingNotifications(
+        that: this,
+      );
+
+  /// Send a raw command; `extra_json` is a JSON object string.
+  Future<String> sendCommand(
+          {required String command, required String extraJson}) =>
+      RustLib.instance.api.crateApiCallsCallSignalingSendCommand(
+          that: this, command: command, extraJson: extraJson);
+
+  Future<String> transmitCandidate(
+          {required PlatformInt64 participantId,
+          required String candidate,
+          required String sdpMid,
+          required PlatformInt64 sdpMlineIndex}) =>
+      RustLib.instance.api.crateApiCallsCallSignalingTransmitCandidate(
+          that: this,
+          participantId: participantId,
+          candidate: candidate,
+          sdpMid: sdpMid,
+          sdpMlineIndex: sdpMlineIndex);
+
+  Future<String> transmitSdp(
+          {required PlatformInt64 participantId,
+          required String sdpType,
+          required String sdp}) =>
+      RustLib.instance.api.crateApiCallsCallSignalingTransmitSdp(
+          that: this, participantId: participantId, sdpType: sdpType, sdp: sdp);
+}
+
+@sealed
 class KolibriSessionImpl extends RustOpaque implements KolibriSession {
   // Not to be used by end users
   KolibriSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
@@ -1196,7 +2179,7 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         RustLib.instance.api.rust_arc_decrement_strong_count_KolibriSessionPtr,
   );
 
-  /// Connect and perform the sessionInit handshake.
+  /// Connect and run the sessionInit handshake.
   Future<HandshakeInfo> connect() =>
       RustLib.instance.api.crateApiSessionKolibriSessionConnect(
         that: this,
@@ -1207,20 +2190,19 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         that: this,
       );
 
-  /// Stream of server pushes. Yields until the session is dropped.
+  /// Server pushes; yields until the session is dropped.
   Stream<PushEvent> pushes() =>
       RustLib.instance.api.crateApiSessionKolibriSessionPushes(
         that: this,
       );
 
-  /// Send a request and await the response payload (raw MessagePack). Errors on
-  /// a server error packet or timeout.
+  /// Send a request, await the response payload (raw msgpack). Errors on server error or timeout.
   Future<Uint8List> request(
           {required int opcode, required List<int> payload}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionRequest(
           that: this, opcode: opcode, payload: payload);
 
-  /// Fire-and-forget send; returns the sequence number.
+  /// Fire-and-forget send; returns the seq number.
   int send({required int opcode, required List<int> payload}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionSend(
           that: this, opcode: opcode, payload: payload);
@@ -1229,26 +2211,34 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         that: this,
       );
 
-  /// Upload a generic file to a CDN URL. Returns a stream of [`UploadEvent`]s
-  /// (progress, then Done/Error).
+  /// Upload a generic file to a CDN URL. Streams progress, then Done/Error.
+  /// `user_agent` defaults to the app string when null.
   Stream<UploadEvent> uploadFile(
           {required String url,
           required List<int> data,
-          required String filename}) =>
+          required String filename,
+          String? userAgent}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionUploadFile(
-          that: this, url: url, data: data, filename: filename);
+          that: this,
+          url: url,
+          data: data,
+          filename: filename,
+          userAgent: userAgent);
 
-  /// Upload a photo via multipart/form-data. Returns a stream of upload events;
-  /// parse the `photoToken` from the `Done` body.
+  /// Upload a photo via multipart/form-data. Parse `photoToken` from the `Done` body.
   Stream<UploadEvent> uploadPhoto(
           {required String url,
           required List<int> data,
-          required String filename}) =>
+          required String filename,
+          String? userAgent}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionUploadPhoto(
-          that: this, url: url, data: data, filename: filename);
+          that: this,
+          url: url,
+          data: data,
+          filename: filename,
+          userAgent: userAgent);
 
-  /// Upload a video in parallel resumable chunks. Returns a stream of events;
-  /// `Done{status:200}` means success.
+  /// Upload a video in parallel resumable chunks. `Done{status:200}` means success.
   Stream<UploadEvent> uploadVideo(
           {required String url,
           required List<int> data,

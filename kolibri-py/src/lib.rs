@@ -144,7 +144,8 @@ impl Session {
     }
 
     /// Upload a generic file to a CDN URL. `progress`, if given, gets (sent, total).
-    #[pyo3(signature = (url, data, filename, progress = None))]
+    /// `user_agent` defaults to the session's handshake device.
+    #[pyo3(signature = (url, data, filename, progress = None, user_agent = None))]
     fn upload_file(
         &self,
         py: Python<'_>,
@@ -152,15 +153,17 @@ impl Session {
         data: Vec<u8>,
         filename: &str,
         progress: Option<PyObject>,
+        user_agent: Option<String>,
     ) -> PyResult<PyObject> {
         let rt = self.rt.clone();
         let url = url.to_string();
         let filename = filename.to_string();
         let progress = py_progress(progress);
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
         let resp = py
             .allow_threads(move || {
                 rt.block_on(kolibri_net::media::upload_file(
-                    &url, &data, &filename, false, progress,
+                    &url, &data, &filename, false, progress, &ua,
                 ))
             })
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -168,7 +171,7 @@ impl Session {
     }
 
     /// Upload a photo via multipart/form-data. Parse `photoToken` from the JSON body.
-    #[pyo3(signature = (url, data, filename, progress = None))]
+    #[pyo3(signature = (url, data, filename, progress = None, user_agent = None))]
     fn upload_photo(
         &self,
         py: Python<'_>,
@@ -176,15 +179,17 @@ impl Session {
         data: Vec<u8>,
         filename: &str,
         progress: Option<PyObject>,
+        user_agent: Option<String>,
     ) -> PyResult<PyObject> {
         let rt = self.rt.clone();
         let url = url.to_string();
         let filename = filename.to_string();
         let progress = py_progress(progress);
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
         let resp = py
             .allow_threads(move || {
                 rt.block_on(kolibri_net::media::upload_photo(
-                    &url, &data, &filename, false, progress,
+                    &url, &data, &filename, false, progress, &ua,
                 ))
             })
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -413,10 +418,355 @@ fn auth_mode<'py>(
     PyBytes::new(py, &mode)
 }
 
+fn json_to_py<'py>(py: Python<'py>, value: &serde_json::Value) -> PyResult<Bound<'py, PyAny>> {
+    use serde_json::Value as J;
+    Ok(match value {
+        J::Null => py.None().into_bound(py),
+        J::Bool(b) => PyBool::new(py, *b).to_owned().into_any(),
+        J::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                i.into_pyobject(py).unwrap().into_any()
+            } else if let Some(u) = n.as_u64() {
+                u.into_pyobject(py).unwrap().into_any()
+            } else {
+                n.as_f64().unwrap_or(0.0).into_pyobject(py).unwrap().into_any()
+            }
+        }
+        J::String(s) => s.as_str().into_pyobject(py).unwrap().into_any(),
+        J::Array(a) => {
+            let list = PyList::empty(py);
+            for v in a {
+                list.append(json_to_py(py, v)?)?;
+            }
+            list.into_any()
+        }
+        J::Object(o) => {
+            let dict = PyDict::new(py);
+            for (k, v) in o {
+                dict.set_item(k, json_to_py(py, v)?)?;
+            }
+            dict.into_any()
+        }
+    })
+}
+
+fn py_to_json(obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
+    use serde_json::Value as J;
+    if obj.is_none() {
+        return Ok(J::Null);
+    }
+    if let Ok(b) = obj.downcast::<PyBool>() {
+        return Ok(J::Bool(b.is_true()));
+    }
+    if let Ok(i) = obj.downcast::<PyInt>() {
+        if let Ok(v) = i.extract::<i64>() {
+            return Ok(J::Number(v.into()));
+        }
+        if let Ok(v) = i.extract::<u64>() {
+            return Ok(J::Number(v.into()));
+        }
+        return Err(PyValueError::new_err("integer out of 64-bit range"));
+    }
+    if let Ok(f) = obj.downcast::<PyFloat>() {
+        return Ok(serde_json::Number::from_f64(f.value())
+            .map(J::Number)
+            .unwrap_or(J::Null));
+    }
+    if let Ok(s) = obj.downcast::<PyString>() {
+        return Ok(J::String(s.extract::<String>()?));
+    }
+    if let Ok(list) = obj.downcast::<PyList>() {
+        let mut arr = Vec::with_capacity(list.len());
+        for item in list.iter() {
+            arr.push(py_to_json(&item)?);
+        }
+        return Ok(J::Array(arr));
+    }
+    if let Ok(tuple) = obj.downcast::<PyTuple>() {
+        let mut arr = Vec::with_capacity(tuple.len());
+        for item in tuple.iter() {
+            arr.push(py_to_json(&item)?);
+        }
+        return Ok(J::Array(arr));
+    }
+    if let Ok(dict) = obj.downcast::<PyDict>() {
+        let mut map = serde_json::Map::new();
+        for (k, v) in dict.iter() {
+            let key = k
+                .extract::<String>()
+                .map_err(|_| PyTypeError::new_err("JSON object keys must be strings"))?;
+            map.insert(key, py_to_json(&v)?);
+        }
+        return Ok(J::Object(map));
+    }
+    Err(PyTypeError::new_err(format!(
+        "unsupported type for JSON: {}",
+        obj.get_type().name()?
+    )))
+}
+
+/// Decode a `vcp` call-params string into a dict. With `conversation_id`, the
+/// dict also includes the ready `ws2_url`.
+#[pyfunction]
+#[pyo3(signature = (vcp, conversation_id = None))]
+fn decode_vcp(
+    py: Python<'_>,
+    vcp: &str,
+    conversation_id: Option<&str>,
+) -> PyResult<Option<PyObject>> {
+    let Some(p) = kolibri_net::calls::ConversationParams::decode(vcp) else {
+        return Ok(None);
+    };
+    let dict = PyDict::new(py);
+    dict.set_item("token", &p.token)?;
+    dict.set_item("ws_endpoint", &p.ws_endpoint)?;
+    dict.set_item("stun", &p.stun)?;
+    dict.set_item("turn", p.turn.clone())?;
+    dict.set_item("turn_user", &p.turn_user)?;
+    dict.set_item("turn_password", &p.turn_password)?;
+    dict.set_item("is_video", p.is_video)?;
+    dict.set_item("expires_at", p.expires_at)?;
+    dict.set_item("user_id", p.user_id())?;
+
+    let ice = PyList::empty(py);
+    for server in p.ice_servers() {
+        let entry = PyDict::new(py);
+        entry.set_item("urls", server.urls)?;
+        entry.set_item("username", server.username)?;
+        entry.set_item("credential", server.credential)?;
+        ice.append(entry)?;
+    }
+    dict.set_item("ice_servers", ice)?;
+
+    if let Some(cid) = conversation_id {
+        let url = p.ws2_url(cid, &kolibri_net::calls::Ws2ClientInfo::default());
+        dict.set_item("ws2_url", url)?;
+    }
+    Ok(Some(dict.into_any().unbind()))
+}
+
+/// ws2 call-signaling client. Connects on construction; blocking methods drive
+/// the internal runtime.
+#[pyclass]
+struct CallSignaling {
+    rt: Arc<Runtime>,
+    inner: Arc<kolibri_net::calls::Ws2Signaling>,
+    notif_rx: Mutex<broadcast::Receiver<serde_json::Value>>,
+}
+
+#[pymethods]
+impl CallSignaling {
+    #[new]
+    #[pyo3(signature = (url, user_agent = None))]
+    fn new(py: Python<'_>, url: &str, user_agent: Option<String>) -> PyResult<Self> {
+        let rt = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?,
+        );
+        let url = url.to_string();
+        let rt2 = rt.clone();
+        let inner = py
+            .allow_threads(move || {
+                rt2.block_on(kolibri_net::calls::Ws2Signaling::connect(
+                    &url,
+                    user_agent.as_deref(),
+                ))
+            })
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        let inner = Arc::new(inner);
+        let notif_rx = Mutex::new(inner.notifications());
+        Ok(Self { rt, inner, notif_rx })
+    }
+
+    fn accept_call(&self, py: Python<'_>) -> PyResult<PyObject> {
+        self.run(py, |s| Box::pin(async move { s.accept_call().await }))
+    }
+
+    fn hangup(&self, py: Python<'_>, reason: &str) -> PyResult<PyObject> {
+        let reason = reason.to_string();
+        self.run(py, move |s| {
+            Box::pin(async move { s.hangup(&reason).await })
+        })
+    }
+
+    fn transmit_sdp(
+        &self,
+        py: Python<'_>,
+        participant_id: i64,
+        sdp_type: &str,
+        sdp: &str,
+    ) -> PyResult<PyObject> {
+        let (t, d) = (sdp_type.to_string(), sdp.to_string());
+        self.run(py, move |s| {
+            Box::pin(async move { s.transmit_sdp(participant_id, &t, &d).await })
+        })
+    }
+
+    fn transmit_candidate(
+        &self,
+        py: Python<'_>,
+        participant_id: i64,
+        candidate: &str,
+        sdp_mid: &str,
+        sdp_mline_index: i64,
+    ) -> PyResult<PyObject> {
+        let (c, m) = (candidate.to_string(), sdp_mid.to_string());
+        self.run(py, move |s| {
+            Box::pin(async move {
+                s.transmit_candidate(participant_id, &c, &m, sdp_mline_index)
+                    .await
+            })
+        })
+    }
+
+    fn change_media_settings(
+        &self,
+        py: Python<'_>,
+        audio: bool,
+        video: bool,
+        screen: bool,
+    ) -> PyResult<PyObject> {
+        self.run(py, move |s| {
+            Box::pin(async move { s.change_media_settings(audio, video, screen).await })
+        })
+    }
+
+    /// Send a raw command with a dict of extra fields.
+    fn send_command(
+        &self,
+        py: Python<'_>,
+        command: &str,
+        extra: &Bound<'_, PyAny>,
+    ) -> PyResult<PyObject> {
+        let extra = py_to_json(extra)?;
+        let command = command.to_string();
+        self.run(py, move |s| {
+            Box::pin(async move { s.send_command(&command, extra).await })
+        })
+    }
+
+    /// Wait for the next ws2 notification. Returns a dict or None on timeout.
+    #[pyo3(signature = (timeout_secs = None))]
+    fn next_notification(
+        &self,
+        py: Python<'_>,
+        timeout_secs: Option<f64>,
+    ) -> PyResult<Option<PyObject>> {
+        let rt = self.rt.clone();
+        let result = py.allow_threads(move || {
+            let mut rx = self.notif_rx.lock().unwrap();
+            rt.block_on(async {
+                match timeout_secs {
+                    Some(t) => tokio::time::timeout(Duration::from_secs_f64(t), rx.recv())
+                        .await
+                        .ok()
+                        .and_then(|r| r.ok()),
+                    None => rx.recv().await.ok(),
+                }
+            })
+        });
+        match result {
+            Some(v) => Ok(Some(json_to_py(py, &v)?.unbind())),
+            None => Ok(None),
+        }
+    }
+
+    fn is_connected(&self) -> bool {
+        self.inner.is_connected()
+    }
+
+    fn close(&self) {
+        self.inner.close();
+    }
+}
+
+impl CallSignaling {
+    fn run<F>(&self, py: Python<'_>, f: F) -> PyResult<PyObject>
+    where
+        F: FnOnce(
+                Arc<kolibri_net::calls::Ws2Signaling>,
+            ) -> std::pin::Pin<
+                Box<dyn std::future::Future<Output = Result<serde_json::Value, kolibri_net::calls::CallError>> + Send>,
+            > + Send,
+    {
+        let rt = self.rt.clone();
+        let inner = self.inner.clone();
+        let value = py
+            .allow_threads(move || rt.block_on(f(inner)))
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        Ok(json_to_py(py, &value)?.unbind())
+    }
+}
+
+/// Parse a ws2 `connection` notification into `{topology, is_sfu, participants,
+/// ice_servers}` (plus `peer` when `my_user_id` is given).
+#[pyfunction]
+#[pyo3(signature = (notification, my_user_id = None))]
+fn parse_connection(
+    py: Python<'_>,
+    notification: &Bound<'_, PyAny>,
+    my_user_id: Option<i64>,
+) -> PyResult<PyObject> {
+    let info = kolibri_net::calls::parse_connection(&py_to_json(notification)?);
+    let dict = PyDict::new(py);
+    dict.set_item("topology", &info.topology)?;
+    dict.set_item("is_sfu", info.is_sfu())?;
+    dict.set_item("participants", info.participants.clone())?;
+    if let Some(uid) = my_user_id {
+        dict.set_item("peer", info.peer_of(uid))?;
+    }
+    let ice = PyList::empty(py);
+    for s in &info.ice_servers {
+        let entry = PyDict::new(py);
+        entry.set_item("urls", s.urls.clone())?;
+        entry.set_item("username", &s.username)?;
+        entry.set_item("credential", &s.credential)?;
+        ice.append(entry)?;
+    }
+    dict.set_item("ice_servers", ice)?;
+    Ok(dict.into_any().unbind())
+}
+
+/// Parse a ws2 `transmitted-data` notification into `{kind: "sdp", type, sdp}` or
+/// `{kind: "candidate", candidate, sdp_mid, sdp_mline_index}`, or None.
+#[pyfunction]
+fn parse_transmitted_data(
+    py: Python<'_>,
+    notification: &Bound<'_, PyAny>,
+) -> PyResult<Option<PyObject>> {
+    use kolibri_net::calls::TransmittedData;
+    let dict = PyDict::new(py);
+    match kolibri_net::calls::parse_transmitted_data(&py_to_json(notification)?) {
+        Some(TransmittedData::Sdp { sdp_type, sdp }) => {
+            dict.set_item("kind", "sdp")?;
+            dict.set_item("type", sdp_type)?;
+            dict.set_item("sdp", sdp)?;
+        }
+        Some(TransmittedData::Candidate {
+            candidate,
+            sdp_mid,
+            sdp_mline_index,
+        }) => {
+            dict.set_item("kind", "candidate")?;
+            dict.set_item("candidate", candidate)?;
+            dict.set_item("sdp_mid", sdp_mid)?;
+            dict.set_item("sdp_mline_index", sdp_mline_index)?;
+        }
+        None => return Ok(None),
+    }
+    Ok(Some(dict.into_any().unbind()))
+}
+
 #[pymodule]
 fn kolibri(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Session>()?;
+    m.add_class::<CallSignaling>()?;
     m.add_function(wrap_pyfunction!(auth_mode, m)?)?;
+    m.add_function(wrap_pyfunction!(decode_vcp, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_connection, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_transmitted_data, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     Ok(())
 }

@@ -160,18 +160,23 @@ impl KolibriSession {
     }
 
     /// Upload a generic file to a CDN URL. Streams progress, then Done/Error.
+    /// `user_agent` defaults to the session's handshake device.
     pub fn upload_file(
         &self,
         url: String,
         data: Vec<u8>,
         filename: String,
+        user_agent: Option<String>,
         sink: StreamSink<UploadEvent>,
     ) {
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
         self.rt.spawn(drive_upload(sink, move |progress| async move {
-            kolibri_net::media::upload_file(&url, &data, &filename, false, Some(progress))
-                .await
-                .map(|r| (r.status, r.body))
-                .map_err(|e| e.to_string())
+            kolibri_net::media::upload_file(
+                &url, &data, &filename, false, Some(progress), &ua,
+            )
+            .await
+            .map(|r| (r.status, r.body))
+            .map_err(|e| e.to_string())
         }));
     }
 
@@ -181,13 +186,17 @@ impl KolibriSession {
         url: String,
         data: Vec<u8>,
         filename: String,
+        user_agent: Option<String>,
         sink: StreamSink<UploadEvent>,
     ) {
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
         self.rt.spawn(drive_upload(sink, move |progress| async move {
-            kolibri_net::media::upload_photo(&url, &data, &filename, false, Some(progress))
-                .await
-                .map(|r| (r.status, r.body))
-                .map_err(|e| e.to_string())
+            kolibri_net::media::upload_photo(
+                &url, &data, &filename, false, Some(progress), &ua,
+            )
+            .await
+            .map(|r| (r.status, r.body))
+            .map_err(|e| e.to_string())
         }));
     }
 

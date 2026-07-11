@@ -16,6 +16,9 @@ pub mod session;
 #[cfg(feature = "transport")]
 pub mod media;
 
+#[cfg(feature = "calls")]
+pub mod calls;
+
 pub use protocol::{
     cmd, decode, encode, opcodes, Packet, PacketReceiver, HEADER_SIZE, PROTOCOL_VERSION,
 };

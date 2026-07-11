@@ -10,9 +10,8 @@ part 'session.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `drive_upload`
 
-/// Compute the 96-byte anti-spoof fingerprint (authRequest `mode` / login
-/// `chatCacheFingerprint`). The signature / dex / so digests are raw bytes,
-/// supplied by the caller so they can change per app version without rebuilding.
+/// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
+/// signature/dex/so are raw digest bytes, passed in so they can change per app version.
 Uint8List authMode(
         {required List<int> signature,
         required List<int> dex,
@@ -28,7 +27,7 @@ Uint8List authMode(
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<KolibriSession>>
 abstract class KolibriSession implements RustOpaqueInterface {
-  /// Connect and perform the sessionInit handshake.
+  /// Connect and run the sessionInit handshake.
   Future<HandshakeInfo> connect();
 
   void disconnect();
@@ -36,30 +35,33 @@ abstract class KolibriSession implements RustOpaqueInterface {
   factory KolibriSession({required SessionOptions options}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionNew(options: options);
 
-  /// Stream of server pushes. Yields until the session is dropped.
+  /// Server pushes; yields until the session is dropped.
   Stream<PushEvent> pushes();
 
-  /// Send a request and await the response payload (raw MessagePack). Errors on
-  /// a server error packet or timeout.
+  /// Send a request, await the response payload (raw msgpack). Errors on server error or timeout.
   Future<Uint8List> request({required int opcode, required List<int> payload});
 
-  /// Fire-and-forget send; returns the sequence number.
+  /// Fire-and-forget send; returns the seq number.
   int send({required int opcode, required List<int> payload});
 
   String state();
 
-  /// Upload a generic file to a CDN URL. Returns a stream of [`UploadEvent`]s
-  /// (progress, then Done/Error).
+  /// Upload a generic file to a CDN URL. Streams progress, then Done/Error.
+  /// `user_agent` defaults to the app string when null.
   Stream<UploadEvent> uploadFile(
-      {required String url, required List<int> data, required String filename});
+      {required String url,
+      required List<int> data,
+      required String filename,
+      String? userAgent});
 
-  /// Upload a photo via multipart/form-data. Returns a stream of upload events;
-  /// parse the `photoToken` from the `Done` body.
+  /// Upload a photo via multipart/form-data. Parse `photoToken` from the `Done` body.
   Stream<UploadEvent> uploadPhoto(
-      {required String url, required List<int> data, required String filename});
+      {required String url,
+      required List<int> data,
+      required String filename,
+      String? userAgent});
 
-  /// Upload a video in parallel resumable chunks. Returns a stream of events;
-  /// `Done{status:200}` means success.
+  /// Upload a video in parallel resumable chunks. `Done{status:200}` means success.
   Stream<UploadEvent> uploadVideo(
       {required String url,
       required List<int> data,
@@ -67,8 +69,7 @@ abstract class KolibriSession implements RustOpaqueInterface {
       required int concurrency});
 }
 
-/// Result of the sessionInit handshake. `payload` is the raw MessagePack of the
-/// server response — decode it on the Dart side (e.g. with `msgpack_dart`).
+/// sessionInit handshake result. `payload` is raw MessagePack; decode it Dart-side.
 class HandshakeInfo {
   final PlatformInt64? callsSeed;
   final String? deviceName;
@@ -94,7 +95,7 @@ class HandshakeInfo {
           payload == other.payload;
 }
 
-/// A server push. `payload` is raw MessagePack.
+/// Server push; `payload` is raw MessagePack.
 class PushEvent {
   final int opcode;
   final Uint8List payload;
@@ -116,8 +117,7 @@ class PushEvent {
           payload == other.payload;
 }
 
-/// Device + connection options for a session. Device fields feed the sessionInit
-/// handshake; the Dart wrapper supplies sensible defaults.
+/// Device + connection options. Device fields feed the sessionInit handshake.
 class SessionOptions {
   final String host;
   final int port;

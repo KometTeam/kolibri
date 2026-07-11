@@ -14,3 +14,4 @@ pyo3 = { version = "0.25", features = ["extension-module", "abi3-py39"] }
 kolibri-net = { path = "../kolibri-net" }
 tokio = { version = "1", features = ["rt-multi-thread", "time"] }
 rmpv = "1"
+serde_json = "1"
