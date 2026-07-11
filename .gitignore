@@ -1,0 +1,7 @@
+/target
+Cargo.lock
+/.venv
+**/__pycache__/
+*.so
+*.pyd
+.DS_Store
