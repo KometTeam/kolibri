@@ -64,4 +64,11 @@ impl Packet {
     pub fn json(&self) -> Result<serde_json::Value, rmpv::decode::Error> {
         self.value().map(|v| super::json::value_to_json(&v))
     }
+
+    /// payload as JSON with binary tagged `{"$bin":...}` — round-trips, unlike
+    /// [`Packet::json`] (see [`crate::protocol::json`]).
+    #[cfg(feature = "json")]
+    pub fn json_tagged(&self) -> Result<serde_json::Value, rmpv::decode::Error> {
+        self.value().map(|v| super::json::value_to_json_tagged(&v))
+    }
 }

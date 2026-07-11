@@ -144,6 +144,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PushEvent dco_decode_push_event(dynamic raw);
 
   @protected
+  RequestOutcome dco_decode_request_outcome(dynamic raw);
+
+  @protected
   SessionOptions dco_decode_session_options(dynamic raw);
 
   @protected
@@ -292,6 +295,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PushEvent sse_decode_push_event(SseDeserializer deserializer);
+
+  @protected
+  RequestOutcome sse_decode_request_outcome(SseDeserializer deserializer);
 
   @protected
   SessionOptions sse_decode_session_options(SseDeserializer deserializer);
@@ -453,6 +459,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_push_event(PushEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_request_outcome(
+      RequestOutcome self, SseSerializer serializer);
 
   @protected
   void sse_encode_session_options(

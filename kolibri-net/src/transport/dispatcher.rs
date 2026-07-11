@@ -45,12 +45,9 @@ impl Dispatcher {
             let Some(tx) = waiter else {
                 return;
             };
-            let result = if packet.is_error() {
-                Err(error_from_payload(&packet))
-            } else {
-                Ok(packet)
-            };
-            let _ = tx.send(result);
+            // deliver the raw packet (error packets included); the caller decides
+            // whether to map an error packet to `Err` or read it raw.
+            let _ = tx.send(Ok(packet));
         } else {
             // send errors only when there are no subscribers, ignore that
             let _ = self.push_tx.send(packet);
@@ -67,7 +64,7 @@ impl Dispatcher {
     }
 }
 
-fn error_from_payload(packet: &Packet) -> TransportError {
+pub(crate) fn error_from_payload(packet: &Packet) -> TransportError {
     let value = match packet.value() {
         Ok(v) => v,
         Err(_) => {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart'
@@ -112,7 +113,7 @@ KolibriSession openSession({
   String deviceName = 'Dart',
   String deviceLocale = 'ru',
   int clientSessionId = 1700000000,
-  int pingIntervalSecs = 10,
+  int pingIntervalSecs = 30,
   bool pingInteractive = true,
   bool autoReconnect = true,
   bool insecureTls = false,
@@ -164,7 +165,7 @@ KolibriSession openSession({
   String deviceName = 'Dart',
   String deviceLocale = 'ru',
   int clientSessionId = 1700000000,
-  int pingIntervalSecs = 10,
+  int pingIntervalSecs = 30,
   bool pingInteractive = true,
   bool autoReconnect = true,
   bool insecureTls = false,
@@ -198,6 +199,110 @@ KolibriSession openSession({
     wireLog: sink,
   );
   return (session, sink.stream);
+}
+
+/// Build a request from a Dart `Map`; the core does the msgpack. A `Uint8List`
+/// value is sent as a binary field.
+extension KolibriRequestMap on KolibriSession {
+  Future<Map<String, dynamic>> requestMap(
+    int opcode,
+    Map<String, dynamic> payload,
+  ) async {
+    final out = await requestJson(
+      opcode: opcode,
+      jsonIn: jsonEncode(_escapeBinary(payload)),
+    );
+    return _asMap(out);
+  }
+}
+
+/// A full response: packet command plus decoded payload. A server error is
+/// reported here (isError/errorKey), not thrown.
+class KolibriResponse {
+  KolibriResponse({
+    required this.cmd,
+    required this.opcode,
+    required this.payload,
+    this.errorMessage,
+    this.errorKey,
+  });
+
+  final int cmd;
+  final int opcode;
+  final Map<String, dynamic> payload;
+  final String? errorMessage;
+  final String? errorKey;
+
+  bool get isOk => cmd == 1;
+  bool get isNotFound => cmd == 2;
+  bool get isError => cmd == 3;
+}
+
+extension KolibriRequestMapFull on KolibriSession {
+  Future<KolibriResponse> requestMapFull(
+    int opcode,
+    Map<String, dynamic> payload,
+  ) async {
+    final r = await requestFull(
+      opcode: opcode,
+      jsonIn: jsonEncode(_escapeBinary(payload)),
+    );
+    return KolibriResponse(
+      cmd: r.cmd,
+      opcode: r.opcode,
+      payload: _asMap(r.payloadJson),
+      errorMessage: r.errorMessage,
+      errorKey: r.errorKey,
+    );
+  }
+}
+
+/// The handshake payload decoded as a map (no msgpack package needed).
+extension KolibriHandshakeMap on HandshakeInfo {
+  Map<String, dynamic> get payloadMap => _asMap(payloadJson);
+}
+
+/// The push payload decoded as a map.
+extension KolibriPushMap on PushEvent {
+  Map<String, dynamic> get payloadMap => _asMap(payloadJson);
+}
+
+/// Server pushes with their payloads already decoded to maps.
+extension KolibriPushesMap on KolibriSession {
+  Stream<(int, Map<String, dynamic>)> pushesMap() =>
+      pushes().map((e) => (e.opcode, e.payloadMap));
+}
+
+Map<String, dynamic> _asMap(String jsonStr) {
+  final decoded = _unescapeBinary(jsonDecode(jsonStr));
+  return decoded is Map ? Map<String, dynamic>.from(decoded) : <String, dynamic>{};
+}
+
+/// Inverse of [_escapeBinary]: `{"$bin":"<base64>"}` -> `Uint8List`.
+dynamic _unescapeBinary(dynamic value) {
+  if (value is Map) {
+    if (value.length == 1 && value[r'$bin'] is String) {
+      return base64.decode(value[r'$bin'] as String);
+    }
+    return value.map((k, v) => MapEntry(k, _unescapeBinary(v)));
+  }
+  if (value is List) {
+    return value.map(_unescapeBinary).toList();
+  }
+  return value;
+}
+
+dynamic _escapeBinary(dynamic value) {
+  if (value is Uint8List) {
+    return {r'$bin': base64.encode(value)};
+  }
+  if (value is Map) {
+    return value.map((k, v) => MapEntry(k, _escapeBinary(v)));
+  }
+  if (value is List) {
+    return value.map(_escapeBinary).toList();
+  }
+  return value;
 }
 
 /// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).

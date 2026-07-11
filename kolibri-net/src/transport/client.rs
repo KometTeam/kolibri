@@ -183,6 +183,18 @@ impl Client {
     /// `payload` is already-serialized msgpack. not-found comes back as `Ok`
     /// (see [`Packet::is_not_found`]); only an error packet is `Err`.
     pub async fn request(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
+        let packet = self.request_raw(opcode, payload).await?;
+        if packet.is_error() {
+            Err(super::dispatcher::error_from_payload(&packet))
+        } else {
+            Ok(packet)
+        }
+    }
+
+    /// Like [`Client::request`], but returns the raw response packet for any
+    /// command — an error packet comes back as `Ok` (with its payload) rather
+    /// than mapped to `Err`. Only a lost connection or timeout is `Err`.
+    pub async fn request_raw(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
         if !self.is_connected() {
             return Err(TransportError::ConnectionClosed);
         }

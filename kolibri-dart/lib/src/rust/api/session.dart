@@ -49,9 +49,15 @@ abstract class KolibriSession implements RustOpaqueInterface {
   /// awaits the response payload (raw msgpack); errors on server error or timeout
   Future<Uint8List> request({required int opcode, required List<int> payload});
 
-  /// like `request`, but the response as a JSON string for logs (binary ->
-  /// base64; see the core `json` module)
-  Future<String> requestJson({required int opcode, required List<int> payload});
+  /// like `request_json`, but reports the packet command (and any server
+  /// error) instead of throwing, so the host can rebuild its own Packet. Only
+  /// non-packet failures (timeout, closed, expired) come back as `Err`.
+  Future<RequestOutcome> requestFull(
+      {required int opcode, required String jsonIn});
+
+  /// JSON in, JSON out: `json_in` becomes msgpack (`{"$bin":"<b64>"}` ->
+  /// binary), and the response comes back as JSON.
+  Future<String> requestJson({required int opcode, required String jsonIn});
 
   /// fire-and-forget; returns the seq number
   int send({required int opcode, required List<int> payload});
@@ -85,21 +91,27 @@ abstract class KolibriSession implements RustOpaqueInterface {
       required int concurrency});
 }
 
-/// sessionInit handshake result. payload is raw msgpack, decode it dart-side.
+/// sessionInit handshake result. `payload` is raw msgpack, `payload_json` the
+/// same rendered as JSON (for decoding without a msgpack package).
 class HandshakeInfo {
   final PlatformInt64? callsSeed;
   final String? deviceName;
   final Uint8List payload;
+  final String payloadJson;
 
   const HandshakeInfo({
     this.callsSeed,
     this.deviceName,
     required this.payload,
+    required this.payloadJson,
   });
 
   @override
   int get hashCode =>
-      callsSeed.hashCode ^ deviceName.hashCode ^ payload.hashCode;
+      callsSeed.hashCode ^
+      deviceName.hashCode ^
+      payload.hashCode ^
+      payloadJson.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -108,21 +120,24 @@ class HandshakeInfo {
           runtimeType == other.runtimeType &&
           callsSeed == other.callsSeed &&
           deviceName == other.deviceName &&
-          payload == other.payload;
+          payload == other.payload &&
+          payloadJson == other.payloadJson;
 }
 
-/// server push; payload is raw msgpack
+/// server push; `payload` is raw msgpack, `payload_json` the same as JSON.
 class PushEvent {
   final int opcode;
   final Uint8List payload;
+  final String payloadJson;
 
   const PushEvent({
     required this.opcode,
     required this.payload,
+    required this.payloadJson,
   });
 
   @override
-  int get hashCode => opcode.hashCode ^ payload.hashCode;
+  int get hashCode => opcode.hashCode ^ payload.hashCode ^ payloadJson.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -130,7 +145,46 @@ class PushEvent {
       other is PushEvent &&
           runtimeType == other.runtimeType &&
           opcode == other.opcode &&
-          payload == other.payload;
+          payload == other.payload &&
+          payloadJson == other.payloadJson;
+}
+
+/// full request result: `cmd` is the packet command (1=ok, 2=not_found,
+/// 3=error), `payload_json` the tagged JSON, `error_*` a server error. A server
+/// error is reported here, not thrown.
+class RequestOutcome {
+  final int cmd;
+  final int opcode;
+  final String payloadJson;
+  final String? errorMessage;
+  final String? errorKey;
+
+  const RequestOutcome({
+    required this.cmd,
+    required this.opcode,
+    required this.payloadJson,
+    this.errorMessage,
+    this.errorKey,
+  });
+
+  @override
+  int get hashCode =>
+      cmd.hashCode ^
+      opcode.hashCode ^
+      payloadJson.hashCode ^
+      errorMessage.hashCode ^
+      errorKey.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RequestOutcome &&
+          runtimeType == other.runtimeType &&
+          cmd == other.cmd &&
+          opcode == other.opcode &&
+          payloadJson == other.payloadJson &&
+          errorMessage == other.errorMessage &&
+          errorKey == other.errorKey;
 }
 
 /// device + connection options. device fields feed the sessionInit handshake.

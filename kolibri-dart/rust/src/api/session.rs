@@ -4,8 +4,8 @@ use std::time::Duration;
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
 use kolibri_net::{
-    ClientConfig, Direction, HandshakeConfig, ProxyConfig, Session, SessionConfig, SessionState,
-    UserAgent, WireTap,
+    ClientConfig, Direction, HandshakeConfig, Packet, ProxyConfig, Session, SessionConfig,
+    SessionState, UserAgent, WireTap,
 };
 use tokio::runtime::Runtime;
 
@@ -35,17 +35,31 @@ pub struct SessionOptions {
     pub proxy: Option<String>,
 }
 
-/// sessionInit handshake result. payload is raw msgpack, decode it dart-side.
+/// sessionInit handshake result. `payload` is raw msgpack, `payload_json` the
+/// same rendered as JSON (for decoding without a msgpack package).
 pub struct HandshakeInfo {
     pub calls_seed: Option<i64>,
     pub device_name: Option<String>,
     pub payload: Vec<u8>,
+    pub payload_json: String,
 }
 
-/// server push; payload is raw msgpack
+/// server push; `payload` is raw msgpack, `payload_json` the same as JSON.
 pub struct PushEvent {
     pub opcode: u16,
     pub payload: Vec<u8>,
+    pub payload_json: String,
+}
+
+/// full request result: `cmd` is the packet command (1=ok, 2=not_found,
+/// 3=error), `payload_json` the tagged JSON, `error_*` a server error. A server
+/// error is reported here, not thrown.
+pub struct RequestOutcome {
+    pub cmd: u8,
+    pub opcode: u16,
+    pub payload_json: String,
+    pub error_message: Option<String>,
+    pub error_key: Option<String>,
 }
 
 /// one tapped packet for logs. `direction` "out"/"in", `cmd`
@@ -80,6 +94,26 @@ fn cmd_label(dir: Direction, cmd: u8) -> String {
         },
     }
     .to_string()
+}
+
+/// (message, error_key) pulled from an error packet's payload, for convenience;
+/// the host still gets the full body in `payload_json`.
+fn error_fields(packet: &Packet) -> (Option<String>, Option<String>) {
+    let Ok(value) = packet.value() else {
+        return (None, None);
+    };
+    let message = ["localizedMessage", "message", "title"]
+        .iter()
+        .find_map(|k| map_str(&value, k));
+    (message, map_str(&value, "error"))
+}
+
+fn map_str(value: &rmpv::Value, key: &str) -> Option<String> {
+    value
+        .as_map()?
+        .iter()
+        .find(|(k, _)| k.as_str() == Some(key))
+        .and_then(|(_, v)| v.as_str().map(|s| s.to_string()))
 }
 
 /// progress updates, then a terminal Done (status + body) or Error
@@ -195,10 +229,12 @@ impl KolibriSession {
         let mut payload = Vec::new();
         rmpv::encode::write_value(&mut payload, &info.payload)
             .map_err(|e| e.to_string())?;
+        let payload_json = kolibri_net::protocol::value_to_json_tagged(&info.payload).to_string();
         Ok(HandshakeInfo {
             calls_seed: info.calls_seed,
             device_name: info.device_name,
             payload,
+            payload_json,
         })
     }
 
@@ -211,14 +247,55 @@ impl KolibriSession {
         Ok(packet.payload)
     }
 
-    /// like `request`, but the response as a JSON string for logs (binary ->
-    /// base64; see the core `json` module)
-    pub fn request_json(&self, opcode: u16, payload: Vec<u8>) -> Result<String, String> {
+    /// JSON in, JSON out: `json_in` becomes msgpack (`{"$bin":"<b64>"}` ->
+    /// binary), and the response comes back as JSON.
+    pub fn request_json(&self, opcode: u16, json_in: String) -> Result<String, String> {
+        let value: serde_json::Value =
+            serde_json::from_str(&json_in).map_err(|e| e.to_string())?;
+        let mut payload = Vec::new();
+        rmpv::encode::write_value(&mut payload, &kolibri_net::protocol::json_to_value(&value))
+            .map_err(|e| e.to_string())?;
         let packet = self
             .rt
             .block_on(self.inner.request(opcode, &payload))
             .map_err(|e| e.to_string())?;
-        packet.json().map(|j| j.to_string()).map_err(|e| e.to_string())
+        packet
+            .json_tagged()
+            .map(|j| j.to_string())
+            .map_err(|e| e.to_string())
+    }
+
+    /// like `request_json`, but reports the packet command and, for an error
+    /// packet, its full payload (as tagged JSON) plus extracted message/key —
+    /// nothing is thrown, so the host can run its own rules over the error body
+    /// (e.g. treat `FAIL_LOGIN_TOKEN`/`FAIL_WRONG_PASSWORD` as expired). Only a
+    /// lost connection or timeout comes back as `Err`.
+    pub fn request_full(&self, opcode: u16, json_in: String) -> Result<RequestOutcome, String> {
+        let value: serde_json::Value =
+            serde_json::from_str(&json_in).map_err(|e| e.to_string())?;
+        let mut payload = Vec::new();
+        rmpv::encode::write_value(&mut payload, &kolibri_net::protocol::json_to_value(&value))
+            .map_err(|e| e.to_string())?;
+        let packet = self
+            .rt
+            .block_on(self.inner.request_raw(opcode, &payload))
+            .map_err(|e| e.to_string())?;
+        let payload_json = packet
+            .json_tagged()
+            .map(|j| j.to_string())
+            .unwrap_or_else(|_| "null".to_string());
+        let (error_message, error_key) = if packet.is_error() {
+            error_fields(&packet)
+        } else {
+            (None, None)
+        };
+        Ok(RequestOutcome {
+            cmd: packet.cmd,
+            opcode: packet.opcode,
+            payload_json,
+            error_message,
+            error_key,
+        })
     }
 
     /// fire-and-forget; returns the seq number
@@ -332,9 +409,14 @@ impl KolibriSession {
         let mut rx = self.inner.subscribe();
         self.rt.spawn(async move {
             while let Ok(packet) = rx.recv().await {
+                let payload_json = packet
+                    .json_tagged()
+                    .map(|j| j.to_string())
+                    .unwrap_or_else(|_| "null".to_string());
                 let event = PushEvent {
                     opcode: packet.opcode,
                     payload: packet.payload,
+                    payload_json,
                 };
                 if sink.add(event).is_err() {
                     break;

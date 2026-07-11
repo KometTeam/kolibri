@@ -17,6 +17,7 @@ The core is UI- and platform-agnostic: bytes in, bytes out.
 | [`kolibri-net`](kolibri-net) | Rust core: packet codec, framing, compression, async TLS transport, session state machine, anti-spoof fingerprint, media uploads, calls (vcp + ws2 signaling). |
 | [`kolibri-py`](kolibri-py) | Python bindings (pyo3/maturin): a synchronous `Session`, calls, uploads, native dicts instead of bytes. |
 | [`kolibri-dart`](kolibri-dart) | Dart/Flutter bindings (`flutter_rust_bridge`): async `Future`s + push/progress `Stream`s. |
+| [`kolibri-go`](kolibri-go) | Go bindings (cgo over a C ABI): a blocking `Session`, wire-log via callback. |
 
 The idea: the session machine (handshake, ping, reconnect) and protocol parsing
 live in the core, so every binding gets them for free.
@@ -72,6 +73,14 @@ await initKolibri(libraryPath: '.../libkolibri_dart.dylib'); // not needed on Fl
 final s = openSession(host: 'host.example');
 final info = await s.connect();
 final resp = await s.request(opcode: 64, payload: msgpackBytes);
+```
+
+**Go:**
+```go
+s, _ := kolibri.Open(kolibri.DefaultConfig("host.example"))
+defer s.Close()
+info, _ := s.Connect()                      // handshake
+resp, _ := s.Request(opcode, msgpackBytes)  // request/response
 ```
 
 ## Build & test

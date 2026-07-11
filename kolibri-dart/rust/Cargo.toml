@@ -1,5 +1,5 @@
 [package]
-name = "kolibri-dart"
+name = "kolibri_dart"
 version = "0.1.0"
 edition = "2021"
 description = "Dart/Flutter bindings for the Kolibri messaging protocol (via flutter_rust_bridge)"

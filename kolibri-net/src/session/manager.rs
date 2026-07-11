@@ -121,6 +121,16 @@ impl Session {
         }
     }
 
+    /// like [`Session::request`], but returns the raw response packet — an error
+    /// packet comes back as `Ok` with its payload, not mapped to `Err`.
+    pub async fn request_raw(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
+        let client = self.shared.client.lock().unwrap().clone();
+        match client {
+            Some(c) => c.request_raw(opcode, payload).await,
+            None => Err(TransportError::ConnectionClosed),
+        }
+    }
+
     pub fn send(&self, opcode: u16, payload: &[u8]) -> Result<u16, TransportError> {
         let client = self.shared.client.lock().unwrap().clone();
         match client {
@@ -253,7 +263,8 @@ async fn maintain(shared: &Arc<Shared>, client: Arc<Client>) {
     let interval = shared.config.ping_interval;
     let ping_shared = shared.clone();
     let ping_task = tokio::spawn(async move {
-        let mut tick = tokio::time::interval(interval);
+        // first keepalive fires one interval after connect, not immediately
+        let mut tick = tokio::time::interval_at(tokio::time::Instant::now() + interval, interval);
         loop {
             tick.tick().await;
             let interactive = ping_shared.ping_interactive.load(Ordering::Relaxed);

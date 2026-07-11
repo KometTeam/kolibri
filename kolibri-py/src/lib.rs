@@ -46,7 +46,7 @@ impl Session {
         device_name = "Rust",
         device_locale = "ru",
         client_session_id = 1_700_000_000i64,
-        ping_interval_secs = 10u64,
+        ping_interval_secs = 30u64,
         ping_interactive = true,
         auto_reconnect = true,
         insecure_tls = false,
