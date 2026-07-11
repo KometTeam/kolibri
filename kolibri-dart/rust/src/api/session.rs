@@ -4,7 +4,8 @@ use std::time::Duration;
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
 use kolibri_net::{
-    ClientConfig, HandshakeConfig, Session, SessionConfig, SessionState, UserAgent,
+    ClientConfig, Direction, HandshakeConfig, Session, SessionConfig, SessionState, UserAgent,
+    WireTap,
 };
 use tokio::runtime::Runtime;
 
@@ -27,6 +28,7 @@ pub struct SessionOptions {
     pub device_locale: String,
     pub client_session_id: i64,
     pub ping_interval_secs: u64,
+    pub ping_interactive: bool,
     pub auto_reconnect: bool,
     pub insecure_tls: bool,
 }
@@ -42,6 +44,40 @@ pub struct HandshakeInfo {
 pub struct PushEvent {
     pub opcode: u16,
     pub payload: Vec<u8>,
+}
+
+/// one tapped packet for logs. `direction` "out"/"in", `cmd`
+/// "request"/"ok"/"not_found"/"error"/"push", `json` the payload (lossy: binary
+/// -> base64).
+pub struct WireLogEvent {
+    pub direction: String,
+    pub cmd: String,
+    pub opcode: u16,
+    pub seq: u16,
+    pub json: String,
+}
+
+fn wire_json(payload: &[u8]) -> String {
+    if payload.is_empty() {
+        return "null".to_string();
+    }
+    match rmpv::decode::read_value(&mut &payload[..]) {
+        Ok(v) => kolibri_net::protocol::value_to_json(&v).to_string(),
+        Err(_) => "null".to_string(),
+    }
+}
+
+fn cmd_label(dir: Direction, cmd: u8) -> String {
+    match cmd {
+        kolibri_net::cmd::OK => "ok",
+        kolibri_net::cmd::NOT_FOUND => "not_found",
+        kolibri_net::cmd::ERROR => "error",
+        _ => match dir {
+            Direction::Out => "request",
+            Direction::In => "push",
+        },
+    }
+    .to_string()
 }
 
 /// progress updates, then a terminal Done (status + body) or Error
@@ -87,8 +123,13 @@ pub struct KolibriSession {
 }
 
 impl KolibriSession {
+    /// `wire_log`, if given, gets every packet both ways (requests, pushes,
+    /// handshake, ping), across reconnects.
     #[frb(sync)]
-    pub fn new(options: SessionOptions) -> Result<KolibriSession, String> {
+    pub fn new(
+        options: SessionOptions,
+        wire_log: Option<StreamSink<WireLogEvent>>,
+    ) -> Result<KolibriSession, String> {
         let user_agent = UserAgent {
             device_type: options.device_type,
             app_version: options.app_version,
@@ -112,6 +153,7 @@ impl KolibriSession {
         client.insecure_tls = options.insecure_tls;
         let mut config = SessionConfig::new(client, handshake);
         config.ping_interval = Duration::from_secs(options.ping_interval_secs);
+        config.ping_interactive = options.ping_interactive;
         config.auto_reconnect = options.auto_reconnect;
 
         let rt = Arc::new(
@@ -120,7 +162,19 @@ impl KolibriSession {
                 .build()
                 .map_err(|e| e.to_string())?,
         );
-        let inner = Arc::new(Session::new(config));
+        let tap: Option<WireTap> = wire_log.map(|sink| {
+            let tap: WireTap = Arc::new(move |dir, cmd, opcode, seq, payload| {
+                let _ = sink.add(WireLogEvent {
+                    direction: dir.as_str().to_string(),
+                    cmd: cmd_label(dir, cmd),
+                    opcode,
+                    seq,
+                    json: wire_json(payload),
+                });
+            });
+            tap
+        });
+        let inner = Arc::new(Session::with_wire_tap(config, tap));
         Ok(KolibriSession { rt, inner })
     }
 
@@ -149,6 +203,16 @@ impl KolibriSession {
         Ok(packet.payload)
     }
 
+    /// like `request`, but the response as a JSON string for logs (binary ->
+    /// base64; see the core `json` module)
+    pub fn request_json(&self, opcode: u16, payload: Vec<u8>) -> Result<String, String> {
+        let packet = self
+            .rt
+            .block_on(self.inner.request(opcode, &payload))
+            .map_err(|e| e.to_string())?;
+        packet.json().map(|j| j.to_string()).map_err(|e| e.to_string())
+    }
+
     /// fire-and-forget; returns the seq number
     #[frb(sync)]
     pub fn send(&self, opcode: u16, payload: Vec<u8>) -> Result<u32, String> {
@@ -156,6 +220,19 @@ impl KolibriSession {
             .send(opcode, &payload)
             .map(|seq| seq as u32)
             .map_err(|e| e.to_string())
+    }
+
+    /// keepalive `interactive` flag (foreground/background hint)
+    #[frb(sync)]
+    pub fn ping_interactive(&self) -> bool {
+        self.inner.ping_interactive()
+    }
+
+    /// flip `interactive` on a live session; one ping goes out now so the server
+    /// hears it right away
+    #[frb(sync)]
+    pub fn set_ping_interactive(&self, interactive: bool) {
+        self.inner.set_ping_interactive(interactive);
     }
 
     /// generic file upload to a CDN url. streams progress, then Done/Error.

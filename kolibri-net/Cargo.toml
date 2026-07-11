@@ -13,11 +13,11 @@ default = ["transport", "calls"]
 transport = ["dep:tokio", "dep:tokio-rustls", "dep:rustls", "dep:webpki-roots"]
 calls = [
     "transport",
+    "json",
     "dep:tokio-tungstenite",
     "dep:futures-util",
-    "dep:serde_json",
-    "dep:base64",
 ]
+json = ["dep:serde_json", "dep:base64"]
 
 [dependencies]
 rmpv = "1"

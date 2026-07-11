@@ -3,10 +3,11 @@
 //! pushes, and error mapping.
 
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use kolibri_net::protocol::{codec, framing::PacketReceiver, opcodes, packet::cmd};
-use kolibri_net::{Client, ClientConfig, TransportError};
+use kolibri_net::{Client, ClientConfig, Direction, TransportError, WireTap};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::time::timeout;
@@ -150,6 +151,34 @@ async fn receives_server_push() {
         .expect("push channel closed");
     assert!(push.is_push());
     assert_eq!(push.opcode, opcodes::NOTIF_MESSAGE);
+}
+
+#[tokio::test]
+async fn wire_tap_sees_both_directions() {
+    let acceptor = TlsAcceptor::from(server_config());
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(run_server(listener, acceptor));
+
+    let seen: Arc<Mutex<Vec<(Direction, u16)>>> = Arc::new(Mutex::new(Vec::new()));
+    let recorder = seen.clone();
+    let tap: WireTap = Arc::new(move |dir, _cmd, opcode, _seq, _payload| {
+        recorder.lock().unwrap().push((dir, opcode));
+    });
+
+    let client =
+        Client::connect_with_tap(ClientConfig::new("127.0.0.1", addr.port()).insecure(true), Some(tap))
+            .await
+            .unwrap();
+
+    client
+        .request(opcodes::MSG_SEND, &msgpack_map(&[("a", "b")]))
+        .await
+        .unwrap();
+
+    let events = seen.lock().unwrap().clone();
+    assert!(events.contains(&(Direction::Out, opcodes::MSG_SEND)), "outgoing not tapped: {events:?}");
+    assert!(events.contains(&(Direction::In, opcodes::MSG_SEND)), "incoming not tapped: {events:?}");
 }
 
 #[tokio::test]

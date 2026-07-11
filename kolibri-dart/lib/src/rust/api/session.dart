@@ -8,7 +8,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'session.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `drive_upload`
+// These functions are ignored because they are not marked as `pub`: `cmd_label`, `drive_upload`, `wire_json`
 
 /// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
 /// signature/dex/so are raw digest bytes, passed in so they can change per app version
@@ -32,8 +32,16 @@ abstract class KolibriSession implements RustOpaqueInterface {
 
   void disconnect();
 
-  factory KolibriSession({required SessionOptions options}) =>
-      RustLib.instance.api.crateApiSessionKolibriSessionNew(options: options);
+  /// `wire_log`, if given, gets every packet both ways (requests, pushes,
+  /// handshake, ping), across reconnects.
+  factory KolibriSession(
+          {required SessionOptions options,
+          RustStreamSink<WireLogEvent>? wireLog}) =>
+      RustLib.instance.api
+          .crateApiSessionKolibriSessionNew(options: options, wireLog: wireLog);
+
+  /// keepalive `interactive` flag (foreground/background hint)
+  bool pingInteractive();
 
   /// server pushes; yields until the session is dropped
   Stream<PushEvent> pushes();
@@ -41,8 +49,16 @@ abstract class KolibriSession implements RustOpaqueInterface {
   /// awaits the response payload (raw msgpack); errors on server error or timeout
   Future<Uint8List> request({required int opcode, required List<int> payload});
 
+  /// like `request`, but the response as a JSON string for logs (binary ->
+  /// base64; see the core `json` module)
+  Future<String> requestJson({required int opcode, required List<int> payload});
+
   /// fire-and-forget; returns the seq number
   int send({required int opcode, required List<int> payload});
+
+  /// flip `interactive` on a live session; one ping goes out now so the server
+  /// hears it right away
+  void setPingInteractive({required bool interactive});
 
   String state();
 
@@ -136,6 +152,7 @@ class SessionOptions {
   final String deviceLocale;
   final PlatformInt64 clientSessionId;
   final BigInt pingIntervalSecs;
+  final bool pingInteractive;
   final bool autoReconnect;
   final bool insecureTls;
 
@@ -157,6 +174,7 @@ class SessionOptions {
     required this.deviceLocale,
     required this.clientSessionId,
     required this.pingIntervalSecs,
+    required this.pingInteractive,
     required this.autoReconnect,
     required this.insecureTls,
   });
@@ -180,6 +198,7 @@ class SessionOptions {
       deviceLocale.hashCode ^
       clientSessionId.hashCode ^
       pingIntervalSecs.hashCode ^
+      pingInteractive.hashCode ^
       autoReconnect.hashCode ^
       insecureTls.hashCode;
 
@@ -205,6 +224,7 @@ class SessionOptions {
           deviceLocale == other.deviceLocale &&
           clientSessionId == other.clientSessionId &&
           pingIntervalSecs == other.pingIntervalSecs &&
+          pingInteractive == other.pingInteractive &&
           autoReconnect == other.autoReconnect &&
           insecureTls == other.insecureTls;
 }
@@ -224,4 +244,42 @@ sealed class UploadEvent with _$UploadEvent {
   const factory UploadEvent.error({
     required String message,
   }) = UploadEvent_Error;
+}
+
+/// one tapped packet for logs. `direction` "out"/"in", `cmd`
+/// "request"/"ok"/"not_found"/"error"/"push", `json` the payload (lossy: binary
+/// -> base64).
+class WireLogEvent {
+  final String direction;
+  final String cmd;
+  final int opcode;
+  final int seq;
+  final String json;
+
+  const WireLogEvent({
+    required this.direction,
+    required this.cmd,
+    required this.opcode,
+    required this.seq,
+    required this.json,
+  });
+
+  @override
+  int get hashCode =>
+      direction.hashCode ^
+      cmd.hashCode ^
+      opcode.hashCode ^
+      seq.hashCode ^
+      json.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WireLogEvent &&
+          runtimeType == other.runtimeType &&
+          direction == other.direction &&
+          cmd == other.cmd &&
+          opcode == other.opcode &&
+          seq == other.seq &&
+          json == other.json;
 }

@@ -11,9 +11,10 @@ use tokio::time::timeout;
 use super::dispatcher::Dispatcher;
 use super::error::TransportError;
 use super::tls::build_connector;
+use super::wiretap::{Direction, WireTap};
 use crate::protocol::codec;
 use crate::protocol::framing::PacketReceiver;
-use crate::protocol::packet::Packet;
+use crate::protocol::packet::{cmd, Packet};
 
 const READ_CHUNK: usize = 64 * 1024;
 const PUSH_CHANNEL_CAPACITY: usize = 256;
@@ -54,11 +55,20 @@ pub struct Client {
     dispatcher: Arc<Dispatcher>,
     request_timeout: Duration,
     connected_tx: watch::Sender<bool>,
+    tap: Option<WireTap>,
     tasks: Vec<JoinHandle<()>>,
 }
 
 impl Client {
     pub async fn connect(config: ClientConfig) -> Result<Self, TransportError> {
+        Self::connect_with_tap(config, None).await
+    }
+
+    /// like [`Client::connect`], but hands every packet, both ways, to `tap`.
+    pub async fn connect_with_tap(
+        config: ClientConfig,
+        tap: Option<WireTap>,
+    ) -> Result<Self, TransportError> {
         let connector = build_connector(config.insecure_tls)?;
 
         let tcp = timeout(
@@ -97,6 +107,7 @@ impl Client {
 
         let reader_dispatcher = dispatcher.clone();
         let reader_connected = connected_tx.clone();
+        let reader_tap = tap.clone();
         let reader = tokio::spawn(async move {
             let mut receiver = PacketReceiver::new();
             let mut buf = vec![0u8; READ_CHUNK];
@@ -110,7 +121,18 @@ impl Client {
                         };
                         for raw in packets {
                             match codec::decode(&raw) {
-                                Ok(packet) => reader_dispatcher.dispatch(packet),
+                                Ok(packet) => {
+                                    if let Some(t) = &reader_tap {
+                                        t(
+                                            Direction::In,
+                                            packet.cmd,
+                                            packet.opcode,
+                                            packet.seq,
+                                            &packet.payload,
+                                        );
+                                    }
+                                    reader_dispatcher.dispatch(packet);
+                                }
                                 Err(_) => continue,
                             }
                         }
@@ -127,6 +149,7 @@ impl Client {
             dispatcher,
             request_timeout: config.request_timeout,
             connected_tx,
+            tap,
             tasks: vec![writer, reader],
         })
     }
@@ -153,6 +176,9 @@ impl Client {
         }
 
         let seq = self.next_seq();
+        if let Some(t) = &self.tap {
+            t(Direction::Out, cmd::REQUEST, opcode, seq, payload);
+        }
         let bytes = codec::encode(opcode, payload, seq);
         let rx = self.dispatcher.register(seq);
 
@@ -174,6 +200,9 @@ impl Client {
             return Err(TransportError::ConnectionClosed);
         }
         let seq = self.next_seq();
+        if let Some(t) = &self.tap {
+            t(Direction::Out, cmd::REQUEST, opcode, seq, payload);
+        }
         let bytes = codec::encode(opcode, payload, seq);
         self.write_tx
             .send(bytes)

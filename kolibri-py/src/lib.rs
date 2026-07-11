@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kolibri_net::{
-    ClientConfig, HandshakeConfig, Packet, Session as NetSession, SessionConfig, SessionState,
-    TransportError, UserAgent,
+    ClientConfig, Direction, HandshakeConfig, Packet, Session as NetSession, SessionConfig,
+    SessionState, TransportError, UserAgent, WireTap,
 };
 use pyo3::exceptions::{PyRuntimeError, PyTimeoutError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -46,8 +46,10 @@ impl Session {
         device_locale = "ru",
         client_session_id = 1_700_000_000i64,
         ping_interval_secs = 10u64,
+        ping_interactive = true,
         auto_reconnect = true,
-        insecure_tls = false
+        insecure_tls = false,
+        on_wire = None
     ))]
     #[allow(clippy::too_many_arguments)]
     fn new(
@@ -68,8 +70,10 @@ impl Session {
         device_locale: &str,
         client_session_id: i64,
         ping_interval_secs: u64,
+        ping_interactive: bool,
         auto_reconnect: bool,
         insecure_tls: bool,
+        on_wire: Option<PyObject>,
     ) -> PyResult<Self> {
         let user_agent = UserAgent {
             device_type: device_type.to_string(),
@@ -94,6 +98,7 @@ impl Session {
         client.insecure_tls = insecure_tls;
         let mut config = SessionConfig::new(client, handshake);
         config.ping_interval = Duration::from_secs(ping_interval_secs);
+        config.ping_interactive = ping_interactive;
         config.auto_reconnect = auto_reconnect;
 
         let rt = Arc::new(
@@ -102,7 +107,8 @@ impl Session {
                 .build()
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?,
         );
-        let inner = Arc::new(NetSession::new(config));
+        let tap = on_wire.map(wire_tap_from_callable);
+        let inner = Arc::new(NetSession::with_wire_tap(config, tap));
         let push_rx = Mutex::new(inner.subscribe());
 
         Ok(Self { rt, inner, push_rx })
@@ -137,10 +143,36 @@ impl Session {
         Ok(value_to_py(py, &value)?.unbind())
     }
 
+    /// like `request`, but the response as a JSON string for logs (binary ->
+    /// base64; see the core `json` module)
+    fn request_json(&self, py: Python<'_>, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<String> {
+        let bytes = encode_value(&py_to_value(payload)?);
+        let rt = self.rt.clone();
+        let inner = self.inner.clone();
+        let packet = py
+            .allow_threads(move || rt.block_on(inner.request(opcode, &bytes)))
+            .map_err(to_pyerr)?;
+        let json = packet
+            .json()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        Ok(json.to_string())
+    }
+
     /// fire-and-forget; returns the seq number
     fn send(&self, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<u16> {
         let bytes = encode_value(&py_to_value(payload)?);
         self.inner.send(opcode, &bytes).map_err(to_pyerr)
+    }
+
+    /// keepalive `interactive` flag (foreground/background hint)
+    fn ping_interactive(&self) -> bool {
+        self.inner.ping_interactive()
+    }
+
+    /// flip `interactive` on a live session; one ping goes out now so the server
+    /// hears it right away
+    fn set_ping_interactive(&self, interactive: bool) {
+        self.inner.set_ping_interactive(interactive);
     }
 
     /// generic file upload to a CDN url. progress cb, if given, gets (sent, total).
@@ -274,6 +306,39 @@ fn py_progress(progress: Option<PyObject>) -> Option<kolibri_net::media::Progres
             });
         }) as kolibri_net::media::ProgressFn
     })
+}
+
+fn wire_tap_from_callable(cb: PyObject) -> WireTap {
+    let cb = Arc::new(cb);
+    Arc::new(move |dir: Direction, cmd: u8, opcode: u16, seq: u16, payload: &[u8]| {
+        let json = payload_to_json_string(payload);
+        let cmd_label = cmd_label(dir, cmd);
+        Python::with_gil(|py| {
+            let _ = cb.call1(py, (dir.as_str(), cmd_label, opcode, seq, json));
+        });
+    })
+}
+
+fn cmd_label(dir: Direction, cmd: u8) -> &'static str {
+    match cmd {
+        kolibri_net::cmd::OK => "ok",
+        kolibri_net::cmd::NOT_FOUND => "not_found",
+        kolibri_net::cmd::ERROR => "error",
+        _ => match dir {
+            Direction::Out => "request",
+            Direction::In => "push",
+        },
+    }
+}
+
+fn payload_to_json_string(payload: &[u8]) -> String {
+    if payload.is_empty() {
+        return "null".to_string();
+    }
+    match rmpv::decode::read_value(&mut &payload[..]) {
+        Ok(v) => kolibri_net::protocol::value_to_json(&v).to_string(),
+        Err(_) => "null".to_string(),
+    }
 }
 
 fn media_response(py: Python<'_>, resp: kolibri_net::media::HttpResponse) -> PyResult<PyObject> {

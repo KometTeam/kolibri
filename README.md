@@ -106,6 +106,35 @@ dart run example/handshake.dart
 - `calls` (по умолчанию вкл) — звонки (ws2-сигналинг, WebSocket). Кому звонки не
   нужны, отключает и не тянет WebSocket в бинарь.
 
+## Логирование трафика
+
+На проводе — MessagePack, но для логов есть JSON-представление (лоссовое: бинарь
+и ext → base64, нестроковые ключи map → строки; только читать, не отправлять
+обратно).
+
+- **Ответы:** `Session.request_json(opcode, payload)` (Python/Dart) — то же, что
+  `request`, но вернёт JSON-строку.
+- **Всё подряд, в обе стороны** — «wire-tap»: один колбэк на каждый пакет
+  (запросы, пуши, handshake, ping), переживает реконнекты.
+
+```python
+def on_wire(direction, cmd, opcode, seq, js):   # direction "out"|"in", cmd "request"/"ok"/"error"/"push"/"not_found"
+    print(f'{direction} cmd={cmd} op={opcode} seq={seq} {js}')
+
+s = kolibri.Session("host.example", on_wire=on_wire)
+s.connect()   # -> out request op=6 ... / <- in ok op=6 ...
+```
+
+В Dart — `openSessionWithWireLog(...)` вернёт `(session, Stream<WireLogEvent>)`:
+```dart
+final (session, wire) = openSessionWithWireLog(host: 'host.example');
+wire.listen((e) => print('${e.direction} ${e.cmd} op=${e.opcode} ${e.json}'));
+await session.connect();
+```
+
+В Rust это `Session::with_wire_tap(config, tap)` с
+`WireTap = Arc<dyn Fn(Direction, u8 cmd, u16 opcode, u16 seq, &[u8])>`.
+
 ## Пример: музыкальный автоответчик
 
 `kolibri-py/examples/call_bot.py` — бот логинится, ждёт входящий звонок,

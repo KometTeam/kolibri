@@ -24,7 +24,7 @@ pub use protocol::{
 };
 
 #[cfg(feature = "transport")]
-pub use transport::{Client, ClientConfig, TransportError};
+pub use transport::{Client, ClientConfig, Direction, TransportError, WireTap};
 
 #[cfg(feature = "transport")]
 pub use session::{HandshakeConfig, HandshakeInfo, Session, SessionConfig, SessionState, UserAgent};

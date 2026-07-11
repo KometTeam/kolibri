@@ -10,7 +10,7 @@ use tokio::time::sleep;
 use super::config::{HandshakeConfig, SessionConfig};
 use crate::protocol::opcodes;
 use crate::protocol::packet::Packet;
-use crate::transport::{Client, TransportError};
+use crate::transport::{Client, TransportError, WireTap};
 
 const PUSH_CHANNEL_CAPACITY: usize = 256;
 
@@ -44,6 +44,8 @@ impl HandshakeInfo {
 
 struct Shared {
     config: SessionConfig,
+    wire_tap: Option<WireTap>,
+    ping_interactive: AtomicBool,
     client: Mutex<Option<Arc<Client>>>,
     state_tx: watch::Sender<SessionState>,
     push_tx: broadcast::Sender<Packet>,
@@ -73,11 +75,20 @@ pub struct Session {
 
 impl Session {
     pub fn new(config: SessionConfig) -> Self {
+        Self::with_wire_tap(config, None)
+    }
+
+    /// like [`Session::new`], but `wire_tap` sees every packet both ways, across
+    /// reconnects.
+    pub fn with_wire_tap(config: SessionConfig, wire_tap: Option<WireTap>) -> Self {
         let (state_tx, _) = watch::channel(SessionState::Disconnected);
         let (push_tx, _) = broadcast::channel(PUSH_CHANNEL_CAPACITY);
+        let ping_interactive = AtomicBool::new(config.ping_interactive);
         Self {
             shared: Arc::new(Shared {
                 config,
+                wire_tap,
+                ping_interactive,
                 client: Mutex::new(None),
                 state_tx,
                 push_tx,
@@ -116,6 +127,20 @@ impl Session {
             Some(c) => c.send(opcode, payload),
             None => Err(TransportError::ConnectionClosed),
         }
+    }
+
+    /// keepalive `interactive` flag (foreground/background hint).
+    pub fn ping_interactive(&self) -> bool {
+        self.shared.ping_interactive.load(Ordering::Relaxed)
+    }
+
+    /// flip the keepalive `interactive` flag on a live session. later pings pick
+    /// it up; one goes out now (best-effort) so the server hears it right away.
+    pub fn set_ping_interactive(&self, interactive: bool) {
+        self.shared
+            .ping_interactive
+            .store(interactive, Ordering::Relaxed);
+        let _ = self.send(opcodes::PING, &build_ping_payload(interactive));
     }
 
     /// stream survives reconnects; pushes from every underlying connection land here.
@@ -205,7 +230,9 @@ async fn supervise(
 async fn connect_and_handshake(
     shared: &Shared,
 ) -> Result<(Arc<Client>, HandshakeInfo), TransportError> {
-    let client = Arc::new(Client::connect(shared.config.client.clone()).await?);
+    let client = Arc::new(
+        Client::connect_with_tap(shared.config.client.clone(), shared.wire_tap.clone()).await?,
+    );
     let payload = build_handshake_payload(&shared.config.handshake);
     let response = client.request(opcodes::SESSION_INIT, &payload).await?;
     if !response.is_ok() {
@@ -221,15 +248,19 @@ async fn connect_and_handshake(
 
 /// pings on the interval, forwards pushes into the session-wide channel,
 /// returns once the connection drops.
-async fn maintain(shared: &Shared, client: Arc<Client>) {
+async fn maintain(shared: &Arc<Shared>, client: Arc<Client>) {
     let ping_client = client.clone();
     let interval = shared.config.ping_interval;
-    let ping_payload = build_ping_payload(shared.config.ping_interactive);
+    let ping_shared = shared.clone();
     let ping_task = tokio::spawn(async move {
         let mut tick = tokio::time::interval(interval);
         loop {
             tick.tick().await;
-            if ping_client.send(opcodes::PING, &ping_payload).is_err() {
+            let interactive = ping_shared.ping_interactive.load(Ordering::Relaxed);
+            if ping_client
+                .send(opcodes::PING, &build_ping_payload(interactive))
+                .is_err()
+            {
                 break;
             }
         }

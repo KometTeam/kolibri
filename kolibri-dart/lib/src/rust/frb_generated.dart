@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1090560112;
+  int get rustContentHash => -1128288038;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -124,7 +124,10 @@ abstract class RustLibApi extends BaseApi {
   void crateApiSessionKolibriSessionDisconnect({required KolibriSession that});
 
   KolibriSession crateApiSessionKolibriSessionNew(
-      {required SessionOptions options});
+      {required SessionOptions options, RustStreamSink<WireLogEvent>? wireLog});
+
+  bool crateApiSessionKolibriSessionPingInteractive(
+      {required KolibriSession that});
 
   Stream<PushEvent> crateApiSessionKolibriSessionPushes(
       {required KolibriSession that});
@@ -134,10 +137,18 @@ abstract class RustLibApi extends BaseApi {
       required int opcode,
       required List<int> payload});
 
+  Future<String> crateApiSessionKolibriSessionRequestJson(
+      {required KolibriSession that,
+      required int opcode,
+      required List<int> payload});
+
   int crateApiSessionKolibriSessionSend(
       {required KolibriSession that,
       required int opcode,
       required List<int> payload});
+
+  void crateApiSessionKolibriSessionSetPingInteractive(
+      {required KolibriSession that, required bool interactive});
 
   String crateApiSessionKolibriSessionState({required KolibriSession that});
 
@@ -535,11 +546,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   KolibriSession crateApiSessionKolibriSessionNew(
-      {required SessionOptions options}) {
+      {required SessionOptions options,
+      RustStreamSink<WireLogEvent>? wireLog}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_box_autoadd_session_options(options, serializer);
+        sse_encode_opt_StreamSink_wire_log_event_Sse(wireLog, serializer);
         return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12)!;
       },
       codec: SseCodec(
@@ -548,7 +561,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiSessionKolibriSessionNewConstMeta,
-      argValues: [options],
+      argValues: [options, wireLog],
       apiImpl: this,
     ));
   }
@@ -556,7 +569,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSessionKolibriSessionNewConstMeta =>
       const TaskConstMeta(
         debugName: "KolibriSession_new",
-        argNames: ["options"],
+        argNames: ["options", "wireLog"],
+      );
+
+  @override
+  bool crateApiSessionKolibriSessionPingInteractive(
+      {required KolibriSession that}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+            that, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSessionKolibriSessionPingInteractiveConstMeta,
+      argValues: [that],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSessionKolibriSessionPingInteractiveConstMeta =>
+      const TaskConstMeta(
+        debugName: "KolibriSession_ping_interactive",
+        argNames: ["that"],
       );
 
   @override
@@ -570,7 +609,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that, serializer);
         sse_encode_StreamSink_push_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 13, port: port_);
+            funcId: 14, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -602,7 +641,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_16(opcode, serializer);
         sse_encode_list_prim_u_8_loose(payload, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 14, port: port_);
+            funcId: 15, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -621,6 +660,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiSessionKolibriSessionRequestJson(
+      {required KolibriSession that,
+      required int opcode,
+      required List<int> payload}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+            that, serializer);
+        sse_encode_u_16(opcode, serializer);
+        sse_encode_list_prim_u_8_loose(payload, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 16, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_String,
+        decodeErrorData: sse_decode_String,
+      ),
+      constMeta: kCrateApiSessionKolibriSessionRequestJsonConstMeta,
+      argValues: [that, opcode, payload],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSessionKolibriSessionRequestJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "KolibriSession_request_json",
+        argNames: ["that", "opcode", "payload"],
+      );
+
+  @override
   int crateApiSessionKolibriSessionSend(
       {required KolibriSession that,
       required int opcode,
@@ -632,7 +702,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that, serializer);
         sse_encode_u_16(opcode, serializer);
         sse_encode_list_prim_u_8_loose(payload, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_u_32,
@@ -651,13 +721,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiSessionKolibriSessionSetPingInteractive(
+      {required KolibriSession that, required bool interactive}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
+            that, serializer);
+        sse_encode_bool(interactive, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiSessionKolibriSessionSetPingInteractiveConstMeta,
+      argValues: [that, interactive],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiSessionKolibriSessionSetPingInteractiveConstMeta =>
+      const TaskConstMeta(
+        debugName: "KolibriSession_set_ping_interactive",
+        argNames: ["that", "interactive"],
+      );
+
+  @override
   String crateApiSessionKolibriSessionState({required KolibriSession that}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerKolibriSession(
             that, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_String,
@@ -694,7 +791,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_opt_String(userAgent, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 17, port: port_);
+            funcId: 20, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -732,7 +829,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_opt_String(userAgent, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 18, port: port_);
+            funcId: 21, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -770,7 +867,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_u_32(concurrency, serializer);
         sse_encode_StreamSink_upload_event_Sse(sink, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 19, port: port_);
+            funcId: 22, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -804,7 +901,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_list_prim_u_8_loose(so, serializer);
         sse_encode_i_64(callsSeed, serializer);
         sse_encode_String(deviceId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_prim_u_8_strict,
@@ -830,7 +927,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(url, serializer);
         sse_encode_opt_String(userAgent, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 21, port: port_);
+            funcId: 24, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData:
@@ -857,7 +954,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(vcp, serializer);
         sse_encode_String(conversationId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_box_autoadd_call_params,
@@ -882,7 +979,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(notificationJson, serializer);
         sse_encode_i_64(myUserId, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_connection_info,
@@ -907,7 +1004,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(notificationJson, serializer);
-        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24)!;
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27)!;
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_opt_box_autoadd_transmitted_data,
@@ -1009,6 +1106,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<UploadEvent> dco_decode_StreamSink_upload_event_Sse(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<WireLogEvent> dco_decode_StreamSink_wire_log_event_Sse(
       dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
@@ -1148,6 +1252,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<WireLogEvent>? dco_decode_opt_StreamSink_wire_log_event_Sse(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_StreamSink_wire_log_event_Sse(raw);
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
@@ -1187,8 +1298,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionOptions dco_decode_session_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 19)
-      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return SessionOptions(
       host: dco_decode_String(arr[0]),
       port: dco_decode_u_16(arr[1]),
@@ -1207,8 +1318,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       deviceLocale: dco_decode_String(arr[14]),
       clientSessionId: dco_decode_i_64(arr[15]),
       pingIntervalSecs: dco_decode_u_64(arr[16]),
-      autoReconnect: dco_decode_bool(arr[17]),
-      insecureTls: dco_decode_bool(arr[18]),
+      pingInteractive: dco_decode_bool(arr[17]),
+      autoReconnect: dco_decode_bool(arr[18]),
+      insecureTls: dco_decode_bool(arr[19]),
     );
   }
 
@@ -1288,6 +1400,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  WireLogEvent dco_decode_wire_log_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return WireLogEvent(
+      direction: dco_decode_String(arr[0]),
+      cmd: dco_decode_String(arr[1]),
+      opcode: dco_decode_u_16(arr[2]),
+      seq: dco_decode_u_16(arr[3]),
+      json: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_String(deserializer);
@@ -1364,6 +1491,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<UploadEvent> sse_decode_StreamSink_upload_event_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<WireLogEvent> sse_decode_StreamSink_wire_log_event_Sse(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     throw UnimplementedError('Unreachable ()');
@@ -1524,6 +1658,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<WireLogEvent>? sse_decode_opt_StreamSink_wire_log_event_Sse(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_StreamSink_wire_log_event_Sse(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -1597,6 +1743,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_deviceLocale = sse_decode_String(deserializer);
     var var_clientSessionId = sse_decode_i_64(deserializer);
     var var_pingIntervalSecs = sse_decode_u_64(deserializer);
+    var var_pingInteractive = sse_decode_bool(deserializer);
     var var_autoReconnect = sse_decode_bool(deserializer);
     var var_insecureTls = sse_decode_bool(deserializer);
     return SessionOptions(
@@ -1617,6 +1764,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         deviceLocale: var_deviceLocale,
         clientSessionId: var_clientSessionId,
         pingIntervalSecs: var_pingIntervalSecs,
+        pingInteractive: var_pingInteractive,
         autoReconnect: var_autoReconnect,
         insecureTls: var_insecureTls);
   }
@@ -1694,6 +1842,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt sse_decode_usize(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  WireLogEvent sse_decode_wire_log_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_direction = sse_decode_String(deserializer);
+    var var_cmd = sse_decode_String(deserializer);
+    var var_opcode = sse_decode_u_16(deserializer);
+    var var_seq = sse_decode_u_16(deserializer);
+    var var_json = sse_decode_String(deserializer);
+    return WireLogEvent(
+        direction: var_direction,
+        cmd: var_cmd,
+        opcode: var_opcode,
+        seq: var_seq,
+        json: var_json);
   }
 
   @protected
@@ -1803,6 +1967,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         self.setupAndSerialize(
             codec: SseCodec(
           decodeSuccessData: sse_decode_upload_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        )),
+        serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_wire_log_event_Sse(
+      RustStreamSink<WireLogEvent> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+        self.setupAndSerialize(
+            codec: SseCodec(
+          decodeSuccessData: sse_decode_wire_log_event,
           decodeErrorData: sse_decode_AnyhowException,
         )),
         serializer);
@@ -1941,6 +2118,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_StreamSink_wire_log_event_Sse(
+      RustStreamSink<WireLogEvent>? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_StreamSink_wire_log_event_Sse(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -2011,6 +2199,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.deviceLocale, serializer);
     sse_encode_i_64(self.clientSessionId, serializer);
     sse_encode_u_64(self.pingIntervalSecs, serializer);
+    sse_encode_bool(self.pingInteractive, serializer);
     sse_encode_bool(self.autoReconnect, serializer);
     sse_encode_bool(self.insecureTls, serializer);
   }
@@ -2078,6 +2267,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_usize(BigInt self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_wire_log_event(WireLogEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.direction, serializer);
+    sse_encode_String(self.cmd, serializer);
+    sse_encode_u_16(self.opcode, serializer);
+    sse_encode_u_16(self.seq, serializer);
+    sse_encode_String(self.json, serializer);
   }
 
   @protected
@@ -2190,6 +2389,12 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         that: this,
       );
 
+  /// keepalive `interactive` flag (foreground/background hint)
+  bool pingInteractive() =>
+      RustLib.instance.api.crateApiSessionKolibriSessionPingInteractive(
+        that: this,
+      );
+
   /// server pushes; yields until the session is dropped
   Stream<PushEvent> pushes() =>
       RustLib.instance.api.crateApiSessionKolibriSessionPushes(
@@ -2202,10 +2407,23 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
       RustLib.instance.api.crateApiSessionKolibriSessionRequest(
           that: this, opcode: opcode, payload: payload);
 
+  /// like `request`, but the response as a JSON string for logs (binary ->
+  /// base64; see the core `json` module)
+  Future<String> requestJson(
+          {required int opcode, required List<int> payload}) =>
+      RustLib.instance.api.crateApiSessionKolibriSessionRequestJson(
+          that: this, opcode: opcode, payload: payload);
+
   /// fire-and-forget; returns the seq number
   int send({required int opcode, required List<int> payload}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionSend(
           that: this, opcode: opcode, payload: payload);
+
+  /// flip `interactive` on a live session; one ping goes out now so the server
+  /// hears it right away
+  void setPingInteractive({required bool interactive}) =>
+      RustLib.instance.api.crateApiSessionKolibriSessionSetPingInteractive(
+          that: this, interactive: interactive);
 
   String state() => RustLib.instance.api.crateApiSessionKolibriSessionState(
         that: this,

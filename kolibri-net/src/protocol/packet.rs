@@ -58,4 +58,10 @@ impl Packet {
         }
         rmpv::decode::read_value(&mut &self.payload[..])
     }
+
+    /// payload as JSON, for logs (lossy — see [`crate::protocol::json`]).
+    #[cfg(feature = "json")]
+    pub fn json(&self) -> Result<serde_json::Value, rmpv::decode::Error> {
+        self.value().map(|v| super::json::value_to_json(&v))
+    }
 }

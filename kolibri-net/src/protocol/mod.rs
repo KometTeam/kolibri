@@ -4,9 +4,13 @@
 pub mod codec;
 pub mod compress;
 pub mod framing;
+#[cfg(feature = "json")]
+pub mod json;
 pub mod opcodes;
 pub mod packet;
 
 pub use codec::{decode, encode, encode_with_cmd, packet_total_len, CodecError, COMPRESSION_THRESHOLD};
 pub use framing::{OverflowError, PacketReceiver};
+#[cfg(feature = "json")]
+pub use json::value_to_json;
 pub use packet::{cmd, Packet, HEADER_SIZE, PROTOCOL_VERSION};

@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1090560112;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1128288038;
 
 // Section: executor
 
@@ -647,9 +647,64 @@ fn wire__crate__api__session__KolibriSession_new_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_options = <crate::api::session::SessionOptions>::sse_decode(&mut deserializer);
+            let api_wire_log = <Option<
+                StreamSink<
+                    crate::api::session::WireLogEvent,
+                    flutter_rust_bridge::for_generated::SseCodec,
+                >,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, String>((move || {
-                let output_ok = crate::api::session::KolibriSession::new(api_options)?;
+                let output_ok =
+                    crate::api::session::KolibriSession::new(api_options, api_wire_log)?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__session__KolibriSession_ping_interactive_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "KolibriSession_ping_interactive",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<KolibriSession>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::session::KolibriSession::ping_interactive(&*api_that_guard),
+                )?;
                 Ok(output_ok)
             })())
         },
@@ -765,6 +820,61 @@ fn wire__crate__api__session__KolibriSession_request_impl(
         },
     )
 }
+fn wire__crate__api__session__KolibriSession_request_json_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "KolibriSession_request_json",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<KolibriSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_opcode = <u16>::sse_decode(&mut deserializer);
+            let api_payload = <Vec<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::session::KolibriSession::request_json(
+                        &*api_that_guard,
+                        api_opcode,
+                        api_payload,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__session__KolibriSession_send_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -812,6 +922,58 @@ fn wire__crate__api__session__KolibriSession_send_impl(
                     api_opcode,
                     api_payload,
                 )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__session__KolibriSession_set_ping_interactive_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "KolibriSession_set_ping_interactive",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<KolibriSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_interactive = <bool>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok = Result::<_, ()>::Ok({
+                    crate::api::session::KolibriSession::set_ping_interactive(
+                        &*api_that_guard,
+                        api_interactive,
+                    );
+                })?;
                 Ok(output_ok)
             })())
         },
@@ -1326,6 +1488,16 @@ impl SseDecode
     }
 }
 
+impl SseDecode
+    for StreamSink<crate::api::session::WireLogEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
 impl SseDecode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1470,6 +1642,24 @@ impl SseDecode for Vec<u8> {
     }
 }
 
+impl SseDecode
+    for Option<
+        StreamSink<crate::api::session::WireLogEvent, flutter_rust_bridge::for_generated::SseCodec>,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<StreamSink<
+                crate::api::session::WireLogEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1548,6 +1738,7 @@ impl SseDecode for crate::api::session::SessionOptions {
         let mut var_deviceLocale = <String>::sse_decode(deserializer);
         let mut var_clientSessionId = <i64>::sse_decode(deserializer);
         let mut var_pingIntervalSecs = <u64>::sse_decode(deserializer);
+        let mut var_pingInteractive = <bool>::sse_decode(deserializer);
         let mut var_autoReconnect = <bool>::sse_decode(deserializer);
         let mut var_insecureTls = <bool>::sse_decode(deserializer);
         return crate::api::session::SessionOptions {
@@ -1568,6 +1759,7 @@ impl SseDecode for crate::api::session::SessionOptions {
             device_locale: var_deviceLocale,
             client_session_id: var_clientSessionId,
             ping_interval_secs: var_pingIntervalSecs,
+            ping_interactive: var_pingInteractive,
             auto_reconnect: var_autoReconnect,
             insecure_tls: var_insecureTls,
         };
@@ -1668,6 +1860,24 @@ impl SseDecode for usize {
     }
 }
 
+impl SseDecode for crate::api::session::WireLogEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_direction = <String>::sse_decode(deserializer);
+        let mut var_cmd = <String>::sse_decode(deserializer);
+        let mut var_opcode = <u16>::sse_decode(deserializer);
+        let mut var_seq = <u16>::sse_decode(deserializer);
+        let mut var_json = <String>::sse_decode(deserializer);
+        return crate::api::session::WireLogEvent {
+            direction: var_direction,
+            cmd: var_cmd,
+            opcode: var_opcode,
+            seq: var_seq,
+            json: var_json,
+        };
+    }
+}
+
 impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1727,34 +1937,40 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        13 => {
+        14 => {
             wire__crate__api__session__KolibriSession_pushes_impl(port, ptr, rust_vec_len, data_len)
         }
-        14 => wire__crate__api__session__KolibriSession_request_impl(
+        15 => wire__crate__api__session__KolibriSession_request_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__api__session__KolibriSession_upload_file_impl(
+        16 => wire__crate__api__session__KolibriSession_request_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__api__session__KolibriSession_upload_photo_impl(
+        20 => wire__crate__api__session__KolibriSession_upload_file_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__session__KolibriSession_upload_video_impl(
+        21 => wire__crate__api__session__KolibriSession_upload_photo_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => {
+        22 => wire__crate__api__session__KolibriSession_upload_video_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        24 => {
             wire__crate__api__calls__connect_call_signaling_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -1775,12 +1991,22 @@ fn pde_ffi_dispatcher_sync_impl(
             wire__crate__api__session__KolibriSession_disconnect_impl(ptr, rust_vec_len, data_len)
         }
         12 => wire__crate__api__session__KolibriSession_new_impl(ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__session__KolibriSession_send_impl(ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__session__KolibriSession_state_impl(ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__session__auth_mode_impl(ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__calls__decode_vcp_impl(ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__calls__parse_connection_impl(ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__calls__parse_transmitted_data_impl(ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__session__KolibriSession_ping_interactive_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        17 => wire__crate__api__session__KolibriSession_send_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__session__KolibriSession_set_ping_interactive_impl(
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        19 => wire__crate__api__session__KolibriSession_state_impl(ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__session__auth_mode_impl(ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__calls__decode_vcp_impl(ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__calls__parse_connection_impl(ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__calls__parse_transmitted_data_impl(ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1950,6 +2176,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionOptions {
             self.device_locale.into_into_dart().into_dart(),
             self.client_session_id.into_into_dart().into_dart(),
             self.ping_interval_secs.into_into_dart().into_dart(),
+            self.ping_interactive.into_into_dart().into_dart(),
             self.auto_reconnect.into_into_dart().into_dart(),
             self.insecure_tls.into_into_dart().into_dart(),
         ]
@@ -2028,6 +2255,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::session::UploadEvent>
         self
     }
 }
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::session::WireLogEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.direction.into_into_dart().into_dart(),
+            self.cmd.into_into_dart().into_dart(),
+            self.opcode.into_into_dart().into_dart(),
+            self.seq.into_into_dart().into_dart(),
+            self.json.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::session::WireLogEvent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::session::WireLogEvent>
+    for crate::api::session::WireLogEvent
+{
+    fn into_into_dart(self) -> crate::api::session::WireLogEvent {
+        self
+    }
+}
 
 impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2090,6 +2341,15 @@ impl SseEncode
 
 impl SseEncode
     for StreamSink<crate::api::session::UploadEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
+    for StreamSink<crate::api::session::WireLogEvent, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2203,6 +2463,23 @@ impl SseEncode for Vec<u8> {
     }
 }
 
+impl SseEncode
+    for Option<
+        StreamSink<crate::api::session::WireLogEvent, flutter_rust_bridge::for_generated::SseCodec>,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <StreamSink<
+                crate::api::session::WireLogEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2271,6 +2548,7 @@ impl SseEncode for crate::api::session::SessionOptions {
         <String>::sse_encode(self.device_locale, serializer);
         <i64>::sse_encode(self.client_session_id, serializer);
         <u64>::sse_encode(self.ping_interval_secs, serializer);
+        <bool>::sse_encode(self.ping_interactive, serializer);
         <bool>::sse_encode(self.auto_reconnect, serializer);
         <bool>::sse_encode(self.insecure_tls, serializer);
     }
@@ -2353,6 +2631,17 @@ impl SseEncode for usize {
             .cursor
             .write_u64::<NativeEndian>(self as _)
             .unwrap();
+    }
+}
+
+impl SseEncode for crate::api::session::WireLogEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.direction, serializer);
+        <String>::sse_encode(self.cmd, serializer);
+        <u16>::sse_encode(self.opcode, serializer);
+        <u16>::sse_encode(self.seq, serializer);
+        <String>::sse_encode(self.json, serializer);
     }
 }
 

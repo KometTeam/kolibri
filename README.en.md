@@ -106,6 +106,34 @@ dart run example/handshake.dart
 - `calls` (default on) — calls (ws2 signaling, WebSocket). Disable it if you
   don't need calls and don't want WebSocket pulled into the binary.
 
+## Traffic logging
+
+The wire is MessagePack, but there's a JSON view for logs (lossy: binary and ext
+become base64, non-string map keys are stringified — read-only, don't round-trip).
+
+- **Responses:** `Session.request_json(opcode, payload)` (Python/Dart) — same as
+  `request` but returns a JSON string.
+- **Everything, both directions** — a "wire tap": one callback per packet
+  (requests, pushes, handshake, ping) that survives reconnects.
+
+```python
+def on_wire(direction, cmd, opcode, seq, js):   # direction "out"|"in", cmd "request"/"ok"/"error"/"push"/"not_found"
+    print(f'{direction} cmd={cmd} op={opcode} seq={seq} {js}')
+
+s = kolibri.Session("host.example", on_wire=on_wire)
+s.connect()   # -> out request op=6 ... / <- in ok op=6 ...
+```
+
+In Dart, `openSessionWithWireLog(...)` returns `(session, Stream<WireLogEvent>)`:
+```dart
+final (session, wire) = openSessionWithWireLog(host: 'host.example');
+wire.listen((e) => print('${e.direction} ${e.cmd} op=${e.opcode} ${e.json}'));
+await session.connect();
+```
+
+In Rust it's `Session::with_wire_tap(config, tap)` with
+`WireTap = Arc<dyn Fn(Direction, u8 cmd, u16 opcode, u16 seq, &[u8])>`.
+
 ## Example: answering music bot
 
 `kolibri-py/examples/call_bot.py` logs in, waits for an incoming call,
