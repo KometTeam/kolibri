@@ -3,13 +3,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 use tokio::sync::{broadcast, mpsc, watch};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 
 use super::dispatcher::Dispatcher;
 use super::error::TransportError;
+use super::proxy::{connect_tcp, ProxyConfig};
 use super::tls::build_connector;
 use super::wiretap::{Direction, WireTap};
 use crate::protocol::codec;
@@ -28,6 +28,8 @@ pub struct ClientConfig {
     pub insecure_tls: bool,
     pub connect_timeout: Duration,
     pub request_timeout: Duration,
+    /// route the connection through a proxy (HTTP CONNECT or SOCKS5)
+    pub proxy: Option<ProxyConfig>,
 }
 
 impl ClientConfig {
@@ -38,11 +40,17 @@ impl ClientConfig {
             insecure_tls: false,
             connect_timeout: Duration::from_secs(15),
             request_timeout: Duration::from_secs(30),
+            proxy: None,
         }
     }
 
     pub fn insecure(mut self, insecure: bool) -> Self {
         self.insecure_tls = insecure;
+        self
+    }
+
+    pub fn proxy(mut self, proxy: Option<ProxyConfig>) -> Self {
+        self.proxy = proxy;
         self
     }
 }
@@ -71,13 +79,17 @@ impl Client {
     ) -> Result<Self, TransportError> {
         let connector = build_connector(config.insecure_tls)?;
 
-        let tcp = timeout(
+        let tcp = connect_tcp(
+            &config.host,
+            config.port,
             config.connect_timeout,
-            TcpStream::connect((config.host.as_str(), config.port)),
+            config.proxy.as_ref(),
         )
         .await
-        .map_err(|_| TransportError::ConnectTimeout)??;
-        tcp.set_nodelay(true).ok();
+        .map_err(|e| match e.kind() {
+            std::io::ErrorKind::TimedOut => TransportError::ConnectTimeout,
+            _ => TransportError::Io(e),
+        })?;
 
         let server_name = rustls::pki_types::ServerName::try_from(config.host.clone())
             .map_err(|e| TransportError::Config(format!("invalid server name: {e}")))?;

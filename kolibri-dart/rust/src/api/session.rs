@@ -4,8 +4,8 @@ use std::time::Duration;
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
 use kolibri_net::{
-    ClientConfig, Direction, HandshakeConfig, Session, SessionConfig, SessionState, UserAgent,
-    WireTap,
+    ClientConfig, Direction, HandshakeConfig, ProxyConfig, Session, SessionConfig, SessionState,
+    UserAgent, WireTap,
 };
 use tokio::runtime::Runtime;
 
@@ -31,6 +31,8 @@ pub struct SessionOptions {
     pub ping_interactive: bool,
     pub auto_reconnect: bool,
     pub insecure_tls: bool,
+    /// proxy url `scheme://[user:pass@]host:port` (http/socks5/socks5h), or none
+    pub proxy: Option<String>,
 }
 
 /// sessionInit handshake result. payload is raw msgpack, decode it dart-side.
@@ -120,6 +122,7 @@ where
 pub struct KolibriSession {
     rt: Arc<Runtime>,
     inner: Arc<Session>,
+    proxy: Option<ProxyConfig>,
 }
 
 impl KolibriSession {
@@ -149,8 +152,13 @@ impl KolibriSession {
             client_session_id: options.client_session_id,
             user_agent,
         };
+        let proxy = match options.proxy {
+            Some(url) => Some(ProxyConfig::parse(&url)?),
+            None => None,
+        };
         let mut client = ClientConfig::new(options.host, options.port);
         client.insecure_tls = options.insecure_tls;
+        client.proxy = proxy.clone();
         let mut config = SessionConfig::new(client, handshake);
         config.ping_interval = Duration::from_secs(options.ping_interval_secs);
         config.ping_interactive = options.ping_interactive;
@@ -175,7 +183,7 @@ impl KolibriSession {
             tap
         });
         let inner = Arc::new(Session::with_wire_tap(config, tap));
-        Ok(KolibriSession { rt, inner })
+        Ok(KolibriSession { rt, inner, proxy })
     }
 
     /// connect + sessionInit handshake
@@ -246,9 +254,16 @@ impl KolibriSession {
         sink: StreamSink<UploadEvent>,
     ) {
         let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
         self.rt.spawn(drive_upload(sink, move |progress| async move {
             kolibri_net::media::upload_file(
-                &url, &data, &filename, false, Some(progress), &ua,
+                &url,
+                &data,
+                &filename,
+                false,
+                proxy.as_ref(),
+                Some(progress),
+                &ua,
             )
             .await
             .map(|r| (r.status, r.body))
@@ -266,9 +281,16 @@ impl KolibriSession {
         sink: StreamSink<UploadEvent>,
     ) {
         let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
         self.rt.spawn(drive_upload(sink, move |progress| async move {
             kolibri_net::media::upload_photo(
-                &url, &data, &filename, false, Some(progress), &ua,
+                &url,
+                &data,
+                &filename,
+                false,
+                proxy.as_ref(),
+                Some(progress),
+                &ua,
             )
             .await
             .map(|r| (r.status, r.body))
@@ -285,6 +307,7 @@ impl KolibriSession {
         concurrency: u32,
         sink: StreamSink<UploadEvent>,
     ) {
+        let proxy = self.proxy.clone();
         self.rt.spawn(drive_upload(sink, move |progress| async move {
             match kolibri_net::media::upload_video(
                 &url,
@@ -292,6 +315,7 @@ impl KolibriSession {
                 chunk_size as usize,
                 concurrency as usize,
                 false,
+                proxy,
                 Some(progress),
             )
             .await

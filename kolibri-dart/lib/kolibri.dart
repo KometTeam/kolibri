@@ -67,6 +67,7 @@ SessionOptions _options({
   required bool pingInteractive,
   required bool autoReconnect,
   required bool insecureTls,
+  required String? proxy,
 }) {
   return SessionOptions(
     host: host,
@@ -89,6 +90,7 @@ SessionOptions _options({
     pingInteractive: pingInteractive,
     autoReconnect: autoReconnect,
     insecureTls: insecureTls,
+    proxy: proxy,
   );
 }
 
@@ -114,6 +116,7 @@ KolibriSession openSession({
   bool pingInteractive = true,
   bool autoReconnect = true,
   bool insecureTls = false,
+  String? proxy,
 }) {
   return KolibriSession(
     options: _options(
@@ -137,6 +140,7 @@ KolibriSession openSession({
       pingInteractive: pingInteractive,
       autoReconnect: autoReconnect,
       insecureTls: insecureTls,
+      proxy: proxy,
     ),
   );
 }
@@ -164,6 +168,7 @@ KolibriSession openSession({
   bool pingInteractive = true,
   bool autoReconnect = true,
   bool insecureTls = false,
+  String? proxy,
 }) {
   final sink = RustStreamSink<WireLogEvent>();
   final session = KolibriSession(
@@ -188,6 +193,7 @@ KolibriSession openSession({
       pingInteractive: pingInteractive,
       autoReconnect: autoReconnect,
       insecureTls: insecureTls,
+      proxy: proxy,
     ),
     wireLog: sink,
   );

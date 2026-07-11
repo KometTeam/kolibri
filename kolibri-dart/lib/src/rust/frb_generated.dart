@@ -181,7 +181,7 @@ abstract class RustLibApi extends BaseApi {
       required String deviceId});
 
   Future<CallSignaling> crateApiCallsConnectCallSignaling(
-      {required String url, String? userAgent});
+      {required String url, String? userAgent, String? proxy});
 
   CallParams? crateApiCallsDecodeVcp(
       {required String vcp, required String conversationId});
@@ -920,12 +920,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<CallSignaling> crateApiCallsConnectCallSignaling(
-      {required String url, String? userAgent}) {
+      {required String url, String? userAgent, String? proxy}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(url, serializer);
         sse_encode_opt_String(userAgent, serializer);
+        sse_encode_opt_String(proxy, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 24, port: port_);
       },
@@ -935,7 +936,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_String,
       ),
       constMeta: kCrateApiCallsConnectCallSignalingConstMeta,
-      argValues: [url, userAgent],
+      argValues: [url, userAgent, proxy],
       apiImpl: this,
     ));
   }
@@ -943,7 +944,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiCallsConnectCallSignalingConstMeta =>
       const TaskConstMeta(
         debugName: "connect_call_signaling",
-        argNames: ["url", "userAgent"],
+        argNames: ["url", "userAgent", "proxy"],
       );
 
   @override
@@ -1298,8 +1299,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionOptions dco_decode_session_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 20)
-      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    if (arr.length != 21)
+      throw Exception('unexpected arr length: expect 21 but see ${arr.length}');
     return SessionOptions(
       host: dco_decode_String(arr[0]),
       port: dco_decode_u_16(arr[1]),
@@ -1321,6 +1322,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       pingInteractive: dco_decode_bool(arr[17]),
       autoReconnect: dco_decode_bool(arr[18]),
       insecureTls: dco_decode_bool(arr[19]),
+      proxy: dco_decode_opt_String(arr[20]),
     );
   }
 
@@ -1746,6 +1748,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_pingInteractive = sse_decode_bool(deserializer);
     var var_autoReconnect = sse_decode_bool(deserializer);
     var var_insecureTls = sse_decode_bool(deserializer);
+    var var_proxy = sse_decode_opt_String(deserializer);
     return SessionOptions(
         host: var_host,
         port: var_port,
@@ -1766,7 +1769,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         pingIntervalSecs: var_pingIntervalSecs,
         pingInteractive: var_pingInteractive,
         autoReconnect: var_autoReconnect,
-        insecureTls: var_insecureTls);
+        insecureTls: var_insecureTls,
+        proxy: var_proxy);
   }
 
   @protected
@@ -2202,6 +2206,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.pingInteractive, serializer);
     sse_encode_bool(self.autoReconnect, serializer);
     sse_encode_bool(self.insecureTls, serializer);
+    sse_encode_opt_String(self.proxy, serializer);
   }
 
   @protected

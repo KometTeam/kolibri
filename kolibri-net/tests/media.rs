@@ -74,7 +74,7 @@ async fn upload_file_posts_body_with_content_range() {
 
     let data = vec![0xAB; 5000];
     let url = format!("http://127.0.0.1:{}/upload", addr.port());
-    let resp = upload_file(&url, &data, "clip.bin", false, None, "test-ua")
+    let resp = upload_file(&url, &data, "clip.bin", false, None, None, "test-ua")
         .await
         .unwrap();
 
@@ -125,7 +125,7 @@ async fn upload_video_chunks_in_parallel_and_covers_all_bytes() {
     let data = vec![0x7F; total];
     let url = format!("http://127.0.0.1:{}/video", addr.port());
 
-    let ok = upload_video(&url, data, 2 * 1024 * 1024, 4, false, None)
+    let ok = upload_video(&url, data, 2 * 1024 * 1024, 4, false, None, None)
         .await
         .unwrap();
 

@@ -17,9 +17,13 @@ host over a C ABI.
 | **4** | FFI: Python (`pyo3`/`maturin`) ✅ · Dart (`flutter_rust_bridge`) planned | 🚧 |
 | 5 | Swap Dart transport behind a flag, live-compare, remove | planned |
 
-Not yet ported: SOCKS5 / HTTP-CONNECT proxy, VPN-bypass (Android). Production
-TLS uses the bundled Mozilla root store — swap for `rustls-platform-verifier` to
-match Dart's OS trust store.
+Proxy: `ClientConfig::proxy` takes a `ProxyConfig` (HTTP CONNECT or SOCKS5, with
+optional user/pass), applied to the main socket, media uploads, and ws2 calls.
+Parse one from a url with `ProxyConfig::parse("http://user:pass@host:port")`
+(`http` / `socks5` / `socks5h`).
+
+Not yet ported: VPN-bypass (Android). Production TLS uses the bundled Mozilla
+root store — swap for `rustls-platform-verifier` to match Dart's OS trust store.
 
 ## Wire format (10-byte big-endian header)
 

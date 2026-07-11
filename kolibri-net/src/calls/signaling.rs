@@ -7,13 +7,29 @@ use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use tokio::sync::{broadcast, mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
+use tokio_tungstenite::client_async_tls_with_config;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 
 use super::CallError;
+use crate::transport::proxy::{connect_tcp, ProxyConfig};
 
 const NOTIF_CAPACITY: usize = 256;
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// host + port out of a `ws://`/`wss://` url, for the proxy connect.
+fn ws_host_port(url: &str) -> Result<(String, u16), CallError> {
+    let (scheme, rest) = url
+        .split_once("://")
+        .ok_or_else(|| CallError::Ws(format!("bad ws url: {url}")))?;
+    let default_port = if scheme == "wss" { 443 } else { 80 };
+    let authority = rest.split(['/', '?']).next().unwrap_or(rest);
+    let authority = authority.rsplit('@').next().unwrap_or(authority);
+    match authority.rsplit_once(':') {
+        Some((h, p)) if p.parse::<u16>().is_ok() => Ok((h.to_string(), p.parse().unwrap())),
+        _ => Ok((authority.to_string(), default_port)),
+    }
+}
 
 /// default ws2 User-Agent (the app's WebSocket lib). override via
 /// [`Ws2Signaling::connect`].
@@ -38,6 +54,16 @@ pub struct Ws2Signaling {
 
 impl Ws2Signaling {
     pub async fn connect(url: &str, user_agent: Option<&str>) -> Result<Self, CallError> {
+        Self::connect_via(url, user_agent, None).await
+    }
+
+    /// like [`Ws2Signaling::connect`], but through `proxy` (HTTP CONNECT or
+    /// SOCKS5).
+    pub async fn connect_via(
+        url: &str,
+        user_agent: Option<&str>,
+        proxy: Option<&ProxyConfig>,
+    ) -> Result<Self, CallError> {
         let mut request = url
             .into_client_request()
             .map_err(|e| CallError::Ws(e.to_string()))?;
@@ -47,9 +73,24 @@ impl Ws2Signaling {
             ua.parse().map_err(|_| CallError::Ws("invalid user agent".into()))?,
         );
 
-        let (ws, _resp) = tokio_tungstenite::connect_async(request)
-            .await
-            .map_err(|e| CallError::Ws(e.to_string()))?;
+        let ws = match proxy {
+            None => {
+                tokio_tungstenite::connect_async(request)
+                    .await
+                    .map_err(|e| CallError::Ws(e.to_string()))?
+                    .0
+            }
+            Some(p) => {
+                let (host, port) = ws_host_port(url)?;
+                let tcp = connect_tcp(&host, port, DEFAULT_TIMEOUT, Some(p))
+                    .await
+                    .map_err(|e| CallError::Ws(e.to_string()))?;
+                client_async_tls_with_config(request, tcp, None, None)
+                    .await
+                    .map_err(|e| CallError::Ws(e.to_string()))?
+                    .0
+            }
+        };
         let (mut write, mut read) = ws.split();
 
         let (write_tx, mut write_rx) = mpsc::unbounded_channel::<String>();

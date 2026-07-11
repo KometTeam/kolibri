@@ -13,9 +13,9 @@ CallParams? decodeVcp({required String vcp, required String conversationId}) =>
         .crateApiCallsDecodeVcp(vcp: vcp, conversationId: conversationId);
 
 Future<CallSignaling> connectCallSignaling(
-        {required String url, String? userAgent}) =>
-    RustLib.instance.api
-        .crateApiCallsConnectCallSignaling(url: url, userAgent: userAgent);
+        {required String url, String? userAgent, String? proxy}) =>
+    RustLib.instance.api.crateApiCallsConnectCallSignaling(
+        url: url, userAgent: userAgent, proxy: proxy);
 
 /// connection notification (JSON string). peer is the participant that isn't my_user_id.
 ConnectionInfo parseConnection(

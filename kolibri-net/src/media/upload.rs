@@ -4,16 +4,19 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use super::http::{self, HttpResponse, ParsedUrl};
 use super::{MediaError, ProgressFn};
+use crate::transport::proxy::ProxyConfig;
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// single POST with a `Content-Range` covering the whole body. status 200 = ok.
 /// `user_agent` from the handshake device (see `UserAgent::http_user_agent`).
+#[allow(clippy::too_many_arguments)]
 pub async fn upload_file(
     url: &str,
     data: &[u8],
     filename: &str,
     insecure: bool,
+    proxy: Option<&ProxyConfig>,
     progress: Option<ProgressFn>,
     user_agent: &str,
 ) -> Result<HttpResponse, MediaError> {
@@ -46,6 +49,7 @@ pub async fn upload_file(
         &headers,
         data,
         insecure,
+        proxy,
         DEFAULT_TIMEOUT,
         progress.as_ref(),
         total,
@@ -55,11 +59,13 @@ pub async fn upload_file(
 
 /// `multipart/form-data`; caller extracts `photoToken` from the JSON body.
 /// `user_agent` from the handshake device.
+#[allow(clippy::too_many_arguments)]
 pub async fn upload_photo(
     url: &str,
     data: &[u8],
     filename: &str,
     insecure: bool,
+    proxy: Option<&ProxyConfig>,
     progress: Option<ProgressFn>,
     user_agent: &str,
 ) -> Result<HttpResponse, MediaError> {
@@ -96,6 +102,7 @@ pub async fn upload_photo(
         &headers,
         &body,
         insecure,
+        proxy,
         Duration::from_secs(120),
         progress.as_ref(),
         total,
@@ -105,12 +112,14 @@ pub async fn upload_photo(
 
 /// parallel-chunk video upload with resume. GET handshake returns the resume
 /// offset, then each `chunk_size` range is POSTed by up to `concurrency` workers.
+#[allow(clippy::too_many_arguments)]
 pub async fn upload_video(
     url: &str,
     data: Vec<u8>,
     chunk_size: usize,
     concurrency: usize,
     insecure: bool,
+    proxy: Option<ProxyConfig>,
     progress: Option<ProgressFn>,
 ) -> Result<bool, MediaError> {
     let parsed = Arc::new(ParsedUrl::parse(url)?);
@@ -121,7 +130,8 @@ pub async fn upload_video(
     let filename = Arc::new(now_micros().to_string());
     let data = Arc::new(data);
 
-    let handshake = ok_cdn_request(&parsed, "GET", &filename, &[], None, insecure).await?;
+    let handshake =
+        ok_cdn_request(&parsed, "GET", &filename, &[], None, insecure, proxy.as_ref()).await?;
     if handshake.status != 200 {
         return Ok(false);
     }
@@ -157,6 +167,7 @@ pub async fn upload_video(
         let next = next.clone();
         let sent = sent.clone();
         let progress = progress.clone();
+        let proxy = proxy.clone();
         handles.push(tokio::spawn(async move {
             loop {
                 let i = next.fetch_add(1, Ordering::SeqCst);
@@ -172,6 +183,7 @@ pub async fn upload_video(
                     &data[start..end],
                     Some(&range),
                     insecure,
+                    proxy.as_ref(),
                 )
                 .await?;
                 if resp.status != 200 && resp.status != 201 {
@@ -195,6 +207,7 @@ pub async fn upload_video(
     Ok(true)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn ok_cdn_request(
     url: &ParsedUrl,
     method: &str,
@@ -202,6 +215,7 @@ async fn ok_cdn_request(
     body: &[u8],
     content_range: Option<&str>,
     insecure: bool,
+    proxy: Option<&ProxyConfig>,
 ) -> Result<HttpResponse, MediaError> {
     let mut headers = vec![
         ("Host", url.host.clone()),
@@ -226,6 +240,7 @@ async fn ok_cdn_request(
         &headers,
         body,
         insecure,
+        proxy,
         Duration::from_secs(120),
         None,
         body.len() as u64,

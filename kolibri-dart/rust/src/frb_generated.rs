@@ -1289,11 +1289,15 @@ fn wire__crate__api__calls__connect_call_signaling_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_url = <String>::sse_decode(&mut deserializer);
             let api_user_agent = <Option<String>>::sse_decode(&mut deserializer);
+            let api_proxy = <Option<String>>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, String>((move || {
-                    let output_ok =
-                        crate::api::calls::connect_call_signaling(api_url, api_user_agent)?;
+                    let output_ok = crate::api::calls::connect_call_signaling(
+                        api_url,
+                        api_user_agent,
+                        api_proxy,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -1741,6 +1745,7 @@ impl SseDecode for crate::api::session::SessionOptions {
         let mut var_pingInteractive = <bool>::sse_decode(deserializer);
         let mut var_autoReconnect = <bool>::sse_decode(deserializer);
         let mut var_insecureTls = <bool>::sse_decode(deserializer);
+        let mut var_proxy = <Option<String>>::sse_decode(deserializer);
         return crate::api::session::SessionOptions {
             host: var_host,
             port: var_port,
@@ -1762,6 +1767,7 @@ impl SseDecode for crate::api::session::SessionOptions {
             ping_interactive: var_pingInteractive,
             auto_reconnect: var_autoReconnect,
             insecure_tls: var_insecureTls,
+            proxy: var_proxy,
         };
     }
 }
@@ -2179,6 +2185,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::session::SessionOptions {
             self.ping_interactive.into_into_dart().into_dart(),
             self.auto_reconnect.into_into_dart().into_dart(),
             self.insecure_tls.into_into_dart().into_dart(),
+            self.proxy.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2551,6 +2558,7 @@ impl SseEncode for crate::api::session::SessionOptions {
         <bool>::sse_encode(self.ping_interactive, serializer);
         <bool>::sse_encode(self.auto_reconnect, serializer);
         <bool>::sse_encode(self.insecure_tls, serializer);
+        <Option<String>>::sse_encode(self.proxy, serializer);
     }
 }
 

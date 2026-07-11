@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 
 use super::{MediaError, ProgressFn};
+use crate::transport::proxy::{connect_tcp, ProxyConfig};
 use crate::transport::tls::build_connector;
 
 pub(crate) struct ParsedUrl {
@@ -59,13 +59,13 @@ pub(crate) async fn request(
     headers: &[(&str, String)],
     body: &[u8],
     insecure: bool,
+    proxy: Option<&ProxyConfig>,
     timeout: Duration,
     progress: Option<&ProgressFn>,
     progress_total: u64,
 ) -> Result<HttpResponse, MediaError> {
     let head = build_head(method, &url.path, headers);
-    let tcp = TcpStream::connect((url.host.as_str(), url.port)).await?;
-    tcp.set_nodelay(true).ok();
+    let tcp = connect_tcp(&url.host, url.port, timeout, proxy).await?;
 
     if url.https {
         let connector = build_connector(insecure).map_err(|e| MediaError::Tls(e.to_string()))?;

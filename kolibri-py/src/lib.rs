@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use kolibri_net::{
-    ClientConfig, Direction, HandshakeConfig, Packet, Session as NetSession, SessionConfig,
-    SessionState, TransportError, UserAgent, WireTap,
+    ClientConfig, Direction, HandshakeConfig, Packet, ProxyConfig, Session as NetSession,
+    SessionConfig, SessionState, TransportError, UserAgent, WireTap,
 };
 use pyo3::exceptions::{PyRuntimeError, PyTimeoutError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
@@ -23,6 +23,7 @@ struct Session {
     rt: Arc<Runtime>,
     inner: Arc<NetSession>,
     push_rx: Mutex<broadcast::Receiver<Packet>>,
+    proxy: Option<ProxyConfig>,
 }
 
 #[pymethods]
@@ -49,6 +50,7 @@ impl Session {
         ping_interactive = true,
         auto_reconnect = true,
         insecure_tls = false,
+        proxy = None,
         on_wire = None
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -73,6 +75,7 @@ impl Session {
         ping_interactive: bool,
         auto_reconnect: bool,
         insecure_tls: bool,
+        proxy: Option<String>,
         on_wire: Option<PyObject>,
     ) -> PyResult<Self> {
         let user_agent = UserAgent {
@@ -94,8 +97,13 @@ impl Session {
             client_session_id,
             user_agent,
         };
+        let proxy = match proxy {
+            Some(url) => Some(ProxyConfig::parse(&url).map_err(PyValueError::new_err)?),
+            None => None,
+        };
         let mut client = ClientConfig::new(host, port);
         client.insecure_tls = insecure_tls;
+        client.proxy = proxy.clone();
         let mut config = SessionConfig::new(client, handshake);
         config.ping_interval = Duration::from_secs(ping_interval_secs);
         config.ping_interactive = ping_interactive;
@@ -111,7 +119,12 @@ impl Session {
         let inner = Arc::new(NetSession::with_wire_tap(config, tap));
         let push_rx = Mutex::new(inner.subscribe());
 
-        Ok(Self { rt, inner, push_rx })
+        Ok(Self {
+            rt,
+            inner,
+            push_rx,
+            proxy,
+        })
     }
 
     /// connect + sessionInit handshake => {calls_seed, device_name, payload}
@@ -192,10 +205,17 @@ impl Session {
         let filename = filename.to_string();
         let progress = py_progress(progress);
         let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
         let resp = py
             .allow_threads(move || {
                 rt.block_on(kolibri_net::media::upload_file(
-                    &url, &data, &filename, false, progress, &ua,
+                    &url,
+                    &data,
+                    &filename,
+                    false,
+                    proxy.as_ref(),
+                    progress,
+                    &ua,
                 ))
             })
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -218,10 +238,17 @@ impl Session {
         let filename = filename.to_string();
         let progress = py_progress(progress);
         let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
         let resp = py
             .allow_threads(move || {
                 rt.block_on(kolibri_net::media::upload_photo(
-                    &url, &data, &filename, false, progress, &ua,
+                    &url,
+                    &data,
+                    &filename,
+                    false,
+                    proxy.as_ref(),
+                    progress,
+                    &ua,
                 ))
             })
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -242,9 +269,10 @@ impl Session {
         let rt = self.rt.clone();
         let url = url.to_string();
         let progress = py_progress(progress);
+        let proxy = self.proxy.clone();
         py.allow_threads(move || {
             rt.block_on(kolibri_net::media::upload_video(
-                &url, data, chunk_size, concurrency, false, progress,
+                &url, data, chunk_size, concurrency, false, proxy, progress,
             ))
         })
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))
@@ -621,21 +649,31 @@ struct CallSignaling {
 #[pymethods]
 impl CallSignaling {
     #[new]
-    #[pyo3(signature = (url, user_agent = None))]
-    fn new(py: Python<'_>, url: &str, user_agent: Option<String>) -> PyResult<Self> {
+    #[pyo3(signature = (url, user_agent = None, proxy = None))]
+    fn new(
+        py: Python<'_>,
+        url: &str,
+        user_agent: Option<String>,
+        proxy: Option<String>,
+    ) -> PyResult<Self> {
         let rt = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?,
         );
+        let proxy = match proxy {
+            Some(url) => Some(ProxyConfig::parse(&url).map_err(PyValueError::new_err)?),
+            None => None,
+        };
         let url = url.to_string();
         let rt2 = rt.clone();
         let inner = py
             .allow_threads(move || {
-                rt2.block_on(kolibri_net::calls::Ws2Signaling::connect(
+                rt2.block_on(kolibri_net::calls::Ws2Signaling::connect_via(
                     &url,
                     user_agent.as_deref(),
+                    proxy.as_ref(),
                 ))
             })
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;

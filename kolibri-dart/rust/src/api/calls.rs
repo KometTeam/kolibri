@@ -61,6 +61,7 @@ pub struct CallSignaling {
 pub fn connect_call_signaling(
     url: String,
     user_agent: Option<String>,
+    proxy: Option<String>,
 ) -> Result<CallSignaling, String> {
     let rt = Arc::new(
         tokio::runtime::Builder::new_multi_thread()
@@ -68,10 +69,15 @@ pub fn connect_call_signaling(
             .build()
             .map_err(|e| e.to_string())?,
     );
+    let proxy = match proxy {
+        Some(url) => Some(kolibri_net::ProxyConfig::parse(&url)?),
+        None => None,
+    };
     let inner = rt
-        .block_on(kolibri_net::calls::Ws2Signaling::connect(
+        .block_on(kolibri_net::calls::Ws2Signaling::connect_via(
             &url,
             user_agent.as_deref(),
+            proxy.as_ref(),
         ))
         .map_err(|e| e.to_string())?;
     Ok(CallSignaling {

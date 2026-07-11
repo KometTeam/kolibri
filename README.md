@@ -38,6 +38,8 @@ LZ4/Zstd, полная машина сессии (handshake, keepalive, реко
   видео (параллельные докачиваемые чанки), с колбэками прогресса.
 - **Звонки** — разбор `vcp`, ws2-сигналинг (SDP/ICE/accept/hangup),
   типизированный разбор входящих нотификаций. Сам WebRTC-медиастек — на хосте.
+- **Прокси** — HTTP CONNECT и SOCKS5 (с авторизацией) для основного сокета,
+  загрузки медиа и ws2-звонков.
 
 ## Быстрый старт
 
@@ -105,6 +107,21 @@ dart run example/handshake.dart
   остаётся чистый протокол-кодек без сети.
 - `calls` (по умолчанию вкл) — звонки (ws2-сигналинг, WebSocket). Кому звонки не
   нужны, отключает и не тянет WebSocket в бинарь.
+
+## Прокси
+
+Соединение (основной сокет + медиа + ws2-звонки) можно пустить через прокси —
+HTTP CONNECT или SOCKS5, с авторизацией. Задаётся url'ом
+`scheme://[user:pass@]host:port`, схемы `http` / `socks5` / `socks5h`.
+
+```python
+s = kolibri.Session("api.oneme.ru", proxy="http://user:pass@10.0.0.1:8080")
+s = kolibri.Session("api.oneme.ru", proxy="socks5://127.0.0.1:1080")
+```
+```dart
+final s = openSession(host: 'api.oneme.ru', proxy: 'socks5://user:pass@127.0.0.1:1080');
+```
+В Rust — `ClientConfig::new(host, port).proxy(Some(ProxyConfig::parse(url)?))`.
 
 ## Логирование трафика
 

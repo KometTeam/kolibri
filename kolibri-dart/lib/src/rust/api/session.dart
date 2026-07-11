@@ -156,6 +156,9 @@ class SessionOptions {
   final bool autoReconnect;
   final bool insecureTls;
 
+  /// proxy url `scheme://[user:pass@]host:port` (http/socks5/socks5h), or none
+  final String? proxy;
+
   const SessionOptions({
     required this.host,
     required this.port,
@@ -177,6 +180,7 @@ class SessionOptions {
     required this.pingInteractive,
     required this.autoReconnect,
     required this.insecureTls,
+    this.proxy,
   });
 
   @override
@@ -200,7 +204,8 @@ class SessionOptions {
       pingIntervalSecs.hashCode ^
       pingInteractive.hashCode ^
       autoReconnect.hashCode ^
-      insecureTls.hashCode;
+      insecureTls.hashCode ^
+      proxy.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -226,7 +231,8 @@ class SessionOptions {
           pingIntervalSecs == other.pingIntervalSecs &&
           pingInteractive == other.pingInteractive &&
           autoReconnect == other.autoReconnect &&
-          insecureTls == other.insecureTls;
+          insecureTls == other.insecureTls &&
+          proxy == other.proxy;
 }
 
 @freezed

@@ -38,6 +38,8 @@ live in the core, so every binding gets them for free.
   resumable chunks), with progress callbacks.
 - **Calls** — `vcp` decode, ws2 signaling (SDP/ICE/accept/hangup), typed parsing
   of incoming notifications. The WebRTC media stack itself stays in the host.
+- **Proxy** — HTTP CONNECT and SOCKS5 (with auth) for the main socket, media
+  uploads, and ws2 calls.
 
 ## Quick start
 
@@ -105,6 +107,21 @@ dart run example/handshake.dart
   the pure protocol codec with no networking.
 - `calls` (default on) — calls (ws2 signaling, WebSocket). Disable it if you
   don't need calls and don't want WebSocket pulled into the binary.
+
+## Proxy
+
+The connection (main socket + media + ws2 calls) can go through a proxy — HTTP
+CONNECT or SOCKS5, with auth. Set it with a url `scheme://[user:pass@]host:port`,
+schemes `http` / `socks5` / `socks5h`.
+
+```python
+s = kolibri.Session("api.oneme.ru", proxy="http://user:pass@10.0.0.1:8080")
+s = kolibri.Session("api.oneme.ru", proxy="socks5://127.0.0.1:1080")
+```
+```dart
+final s = openSession(host: 'api.oneme.ru', proxy: 'socks5://user:pass@127.0.0.1:1080');
+```
+In Rust — `ClientConfig::new(host, port).proxy(Some(ProxyConfig::parse(url)?))`.
 
 ## Traffic logging
 
