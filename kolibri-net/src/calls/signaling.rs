@@ -70,7 +70,8 @@ impl Ws2Signaling {
         let ua = user_agent.unwrap_or(DEFAULT_USER_AGENT);
         request.headers_mut().insert(
             "User-Agent",
-            ua.parse().map_err(|_| CallError::Ws("invalid user agent".into()))?,
+            ua.parse()
+                .map_err(|_| CallError::Ws("invalid user agent".into()))?,
         );
 
         let ws = match proxy {
@@ -235,7 +236,8 @@ impl Ws2Signaling {
     }
 
     pub async fn hangup(&self, reason: &str) -> Result<Value, CallError> {
-        self.send_command("hangup", json!({ "reason": reason })).await
+        self.send_command("hangup", json!({ "reason": reason }))
+            .await
     }
 
     pub async fn change_media_settings(

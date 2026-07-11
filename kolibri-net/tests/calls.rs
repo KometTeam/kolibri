@@ -88,7 +88,8 @@ async fn mock_ws2(listener: TcpListener, got_pong: Arc<AtomicBool>) {
         write.send(Message::text(resp.to_string())).await.unwrap();
 
         if command == "accept-call" {
-            let notif = json!({"type": "notification", "notification": "connection", "topology": "P2P"});
+            let notif =
+                json!({"type": "notification", "notification": "connection", "topology": "P2P"});
             write.send(Message::text(notif.to_string())).await.unwrap();
         }
     }
@@ -144,7 +145,8 @@ async fn ws2_transmit_sdp_shape() {
             let Ok(Message::Text(t)) = msg else { break };
             let v: serde_json::Value = serde_json::from_str(t.as_str()).unwrap();
             *captured2.lock().await = Some(v.clone());
-            let resp = json!({"sequence": v["sequence"], "response": "transmit-data", "type": "response"});
+            let resp =
+                json!({"sequence": v["sequence"], "response": "transmit-data", "type": "response"});
             write.send(Message::text(resp.to_string())).await.unwrap();
         }
     });

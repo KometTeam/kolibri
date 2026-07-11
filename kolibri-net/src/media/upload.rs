@@ -33,10 +33,7 @@ pub async fn upload_file(
             format!("attachment; filename={filename}"),
         ),
         ("Connection", "keep-alive".to_string()),
-        (
-            "User-Agent",
-            percent_encode(user_agent),
-        ),
+        ("User-Agent", percent_encode(user_agent)),
         (
             "Content-Range",
             format!("bytes 0-{}/{}", total.saturating_sub(1), total),
@@ -91,10 +88,7 @@ pub async fn upload_photo(
         ),
         ("Content-Length", total.to_string()),
         ("Connection", "keep-alive".to_string()),
-        (
-            "User-Agent",
-            percent_encode(user_agent),
-        ),
+        ("User-Agent", percent_encode(user_agent)),
     ];
     http::request(
         &parsed,
@@ -130,13 +124,24 @@ pub async fn upload_video(
     let filename = Arc::new(now_micros().to_string());
     let data = Arc::new(data);
 
-    let handshake =
-        ok_cdn_request(&parsed, "GET", &filename, &[], None, insecure, proxy.as_ref()).await?;
+    let handshake = ok_cdn_request(
+        &parsed,
+        "GET",
+        &filename,
+        &[],
+        None,
+        insecure,
+        proxy.as_ref(),
+    )
+    .await?;
     if handshake.status != 200 {
         return Ok(false);
     }
     let mut start_offset = 0usize;
-    if let Ok(resumed) = String::from_utf8_lossy(&handshake.body).trim().parse::<usize>() {
+    if let Ok(resumed) = String::from_utf8_lossy(&handshake.body)
+        .trim()
+        .parse::<usize>()
+    {
         if resumed <= total {
             start_offset = resumed;
         }

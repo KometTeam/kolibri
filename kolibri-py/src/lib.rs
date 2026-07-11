@@ -10,9 +10,7 @@ use kolibri_net::{
 };
 use pyo3::exceptions::{PyRuntimeError, PyTimeoutError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{
-    PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple,
-};
+use pyo3::types::{PyBool, PyBytes, PyDict, PyFloat, PyInt, PyList, PyString, PyTuple};
 use rmpv::Value;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
@@ -143,7 +141,12 @@ impl Session {
     }
 
     /// decoded response; raises on server error packet or timeout
-    fn request(&self, py: Python<'_>, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    fn request(
+        &self,
+        py: Python<'_>,
+        opcode: u16,
+        payload: &Bound<'_, PyAny>,
+    ) -> PyResult<PyObject> {
         let bytes = encode_value(&py_to_value(payload)?);
         let rt = self.rt.clone();
         let inner = self.inner.clone();
@@ -158,7 +161,12 @@ impl Session {
 
     /// like `request`, but the response as a JSON string for logs (binary ->
     /// base64; see the core `json` module)
-    fn request_json(&self, py: Python<'_>, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<String> {
+    fn request_json(
+        &self,
+        py: Python<'_>,
+        opcode: u16,
+        payload: &Bound<'_, PyAny>,
+    ) -> PyResult<String> {
         let bytes = encode_value(&py_to_value(payload)?);
         let rt = self.rt.clone();
         let inner = self.inner.clone();
@@ -272,7 +280,13 @@ impl Session {
         let proxy = self.proxy.clone();
         py.allow_threads(move || {
             rt.block_on(kolibri_net::media::upload_video(
-                &url, data, chunk_size, concurrency, false, proxy, progress,
+                &url,
+                data,
+                chunk_size,
+                concurrency,
+                false,
+                proxy,
+                progress,
             ))
         })
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))
@@ -338,13 +352,15 @@ fn py_progress(progress: Option<PyObject>) -> Option<kolibri_net::media::Progres
 
 fn wire_tap_from_callable(cb: PyObject) -> WireTap {
     let cb = Arc::new(cb);
-    Arc::new(move |dir: Direction, cmd: u8, opcode: u16, seq: u16, payload: &[u8]| {
-        let json = payload_to_json_string(payload);
-        let cmd_label = cmd_label(dir, cmd);
-        Python::with_gil(|py| {
-            let _ = cb.call1(py, (dir.as_str(), cmd_label, opcode, seq, json));
-        });
-    })
+    Arc::new(
+        move |dir: Direction, cmd: u8, opcode: u16, seq: u16, payload: &[u8]| {
+            let json = payload_to_json_string(payload);
+            let cmd_label = cmd_label(dir, cmd);
+            Python::with_gil(|py| {
+                let _ = cb.call1(py, (dir.as_str(), cmd_label, opcode, seq, json));
+            });
+        },
+    )
 }
 
 fn cmd_label(dir: Direction, cmd: u8) -> &'static str {
@@ -522,7 +538,11 @@ fn json_to_py<'py>(py: Python<'py>, value: &serde_json::Value) -> PyResult<Bound
             } else if let Some(u) = n.as_u64() {
                 u.into_pyobject(py).unwrap().into_any()
             } else {
-                n.as_f64().unwrap_or(0.0).into_pyobject(py).unwrap().into_any()
+                n.as_f64()
+                    .unwrap_or(0.0)
+                    .into_pyobject(py)
+                    .unwrap()
+                    .into_any()
             }
         }
         J::String(s) => s.as_str().into_pyobject(py).unwrap().into_any(),
@@ -679,7 +699,11 @@ impl CallSignaling {
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         let inner = Arc::new(inner);
         let notif_rx = Mutex::new(inner.notifications());
-        Ok(Self { rt, inner, notif_rx })
+        Ok(Self {
+            rt,
+            inner,
+            notif_rx,
+        })
     }
 
     fn accept_call(&self, py: Python<'_>) -> PyResult<PyObject> {
@@ -790,7 +814,11 @@ impl CallSignaling {
         F: FnOnce(
                 Arc<kolibri_net::calls::Ws2Signaling>,
             ) -> std::pin::Pin<
-                Box<dyn std::future::Future<Output = Result<serde_json::Value, kolibri_net::calls::CallError>> + Send>,
+                Box<
+                    dyn std::future::Future<
+                            Output = Result<serde_json::Value, kolibri_net::calls::CallError>,
+                        > + Send,
+                >,
             > + Send,
     {
         let rt = self.rt.clone();

@@ -60,7 +60,10 @@ impl CallEvent {
                 .unwrap_or_default();
             return CallEvent::Error(msg);
         }
-        let name = value.get("notification").and_then(|n| n.as_str()).unwrap_or("");
+        let name = value
+            .get("notification")
+            .and_then(|n| n.as_str())
+            .unwrap_or("");
         match name {
             "connection" => CallEvent::Connection(parse_connection(value)),
             "transmitted-data" => match parse_transmitted_data(value) {
@@ -107,7 +110,10 @@ pub fn parse_transmitted_data(value: &Value) -> Option<TransmittedData> {
     if let Some(c) = data.get("candidate") {
         return Some(TransmittedData::Candidate {
             candidate: c.get("candidate")?.as_str()?.to_string(),
-            sdp_mid: c.get("sdpMid").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            sdp_mid: c
+                .get("sdpMid")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             sdp_mline_index: c.get("sdpMLineIndex").and_then(|v| v.as_i64()),
         });
     }
@@ -132,7 +138,10 @@ fn ice_from_conversation_params(cp: Option<&Value>) -> Vec<IceServer> {
             continue;
         };
         let urls: Vec<String> = match entry.get("urls") {
-            Some(Value::Array(a)) => a.iter().filter_map(|u| u.as_str().map(String::from)).collect(),
+            Some(Value::Array(a)) => a
+                .iter()
+                .filter_map(|u| u.as_str().map(String::from))
+                .collect(),
             Some(Value::String(u)) => vec![u.clone()],
             _ => continue,
         };
@@ -141,8 +150,14 @@ fn ice_from_conversation_params(cp: Option<&Value>) -> Vec<IceServer> {
         }
         servers.push(IceServer {
             urls,
-            username: entry.get("username").and_then(|v| v.as_str()).map(String::from),
-            credential: entry.get("credential").and_then(|v| v.as_str()).map(String::from),
+            username: entry
+                .get("username")
+                .and_then(|v| v.as_str())
+                .map(String::from),
+            credential: entry
+                .get("credential")
+                .and_then(|v| v.as_str())
+                .map(String::from),
         });
     }
     servers
@@ -191,7 +206,11 @@ mod tests {
         let cand = json!({"notification": "transmitted-data",
             "data": {"candidate": {"candidate": "candidate:1 ...", "sdpMid": "0", "sdpMLineIndex": 0}}});
         match parse_transmitted_data(&cand) {
-            Some(TransmittedData::Candidate { candidate, sdp_mid, sdp_mline_index }) => {
+            Some(TransmittedData::Candidate {
+                candidate,
+                sdp_mid,
+                sdp_mline_index,
+            }) => {
                 assert!(candidate.starts_with("candidate:"));
                 assert_eq!(sdp_mid.as_deref(), Some("0"));
                 assert_eq!(sdp_mline_index, Some(0));

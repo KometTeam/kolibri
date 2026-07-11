@@ -227,8 +227,7 @@ impl KolibriSession {
             .block_on(self.inner.connect())
             .map_err(|e| e.to_string())?;
         let mut payload = Vec::new();
-        rmpv::encode::write_value(&mut payload, &info.payload)
-            .map_err(|e| e.to_string())?;
+        rmpv::encode::write_value(&mut payload, &info.payload).map_err(|e| e.to_string())?;
         let payload_json = kolibri_net::protocol::value_to_json_tagged(&info.payload).to_string();
         Ok(HandshakeInfo {
             calls_seed: info.calls_seed,
@@ -250,8 +249,7 @@ impl KolibriSession {
     /// JSON in, JSON out: `json_in` becomes msgpack (`{"$bin":"<b64>"}` ->
     /// binary), and the response comes back as JSON.
     pub fn request_json(&self, opcode: u16, json_in: String) -> Result<String, String> {
-        let value: serde_json::Value =
-            serde_json::from_str(&json_in).map_err(|e| e.to_string())?;
+        let value: serde_json::Value = serde_json::from_str(&json_in).map_err(|e| e.to_string())?;
         let mut payload = Vec::new();
         rmpv::encode::write_value(&mut payload, &kolibri_net::protocol::json_to_value(&value))
             .map_err(|e| e.to_string())?;
@@ -271,8 +269,7 @@ impl KolibriSession {
     /// (e.g. treat `FAIL_LOGIN_TOKEN`/`FAIL_WRONG_PASSWORD` as expired). Only a
     /// lost connection or timeout comes back as `Err`.
     pub fn request_full(&self, opcode: u16, json_in: String) -> Result<RequestOutcome, String> {
-        let value: serde_json::Value =
-            serde_json::from_str(&json_in).map_err(|e| e.to_string())?;
+        let value: serde_json::Value = serde_json::from_str(&json_in).map_err(|e| e.to_string())?;
         let mut payload = Vec::new();
         rmpv::encode::write_value(&mut payload, &kolibri_net::protocol::json_to_value(&value))
             .map_err(|e| e.to_string())?;
@@ -332,20 +329,21 @@ impl KolibriSession {
     ) {
         let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
         let proxy = self.proxy.clone();
-        self.rt.spawn(drive_upload(sink, move |progress| async move {
-            kolibri_net::media::upload_file(
-                &url,
-                &data,
-                &filename,
-                false,
-                proxy.as_ref(),
-                Some(progress),
-                &ua,
-            )
-            .await
-            .map(|r| (r.status, r.body))
-            .map_err(|e| e.to_string())
-        }));
+        self.rt
+            .spawn(drive_upload(sink, move |progress| async move {
+                kolibri_net::media::upload_file(
+                    &url,
+                    &data,
+                    &filename,
+                    false,
+                    proxy.as_ref(),
+                    Some(progress),
+                    &ua,
+                )
+                .await
+                .map(|r| (r.status, r.body))
+                .map_err(|e| e.to_string())
+            }));
     }
 
     /// photo upload, multipart/form-data. photoToken comes back in the Done body.
@@ -359,20 +357,21 @@ impl KolibriSession {
     ) {
         let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
         let proxy = self.proxy.clone();
-        self.rt.spawn(drive_upload(sink, move |progress| async move {
-            kolibri_net::media::upload_photo(
-                &url,
-                &data,
-                &filename,
-                false,
-                proxy.as_ref(),
-                Some(progress),
-                &ua,
-            )
-            .await
-            .map(|r| (r.status, r.body))
-            .map_err(|e| e.to_string())
-        }));
+        self.rt
+            .spawn(drive_upload(sink, move |progress| async move {
+                kolibri_net::media::upload_photo(
+                    &url,
+                    &data,
+                    &filename,
+                    false,
+                    proxy.as_ref(),
+                    Some(progress),
+                    &ua,
+                )
+                .await
+                .map(|r| (r.status, r.body))
+                .map_err(|e| e.to_string())
+            }));
     }
 
     /// video upload, parallel resumable chunks. Done{status:200} means success.
@@ -385,23 +384,24 @@ impl KolibriSession {
         sink: StreamSink<UploadEvent>,
     ) {
         let proxy = self.proxy.clone();
-        self.rt.spawn(drive_upload(sink, move |progress| async move {
-            match kolibri_net::media::upload_video(
-                &url,
-                data,
-                chunk_size as usize,
-                concurrency as usize,
-                false,
-                proxy,
-                Some(progress),
-            )
-            .await
-            {
-                Ok(true) => Ok((200, Vec::new())),
-                Ok(false) => Err("upload failed".to_string()),
-                Err(e) => Err(e.to_string()),
-            }
-        }));
+        self.rt
+            .spawn(drive_upload(sink, move |progress| async move {
+                match kolibri_net::media::upload_video(
+                    &url,
+                    data,
+                    chunk_size as usize,
+                    concurrency as usize,
+                    false,
+                    proxy,
+                    Some(progress),
+                )
+                .await
+                {
+                    Ok(true) => Ok((200, Vec::new())),
+                    Ok(false) => Err("upload failed".to_string()),
+                    Err(e) => Err(e.to_string()),
+                }
+            }));
     }
 
     /// server pushes; yields until the session is dropped

@@ -311,8 +311,14 @@ fn reconnect_delay(attempt: u32) -> Duration {
 fn build_handshake_payload(cfg: &HandshakeConfig) -> Vec<u8> {
     let ua = &cfg.user_agent;
     let user_agent = Value::Map(vec![
-        (Value::from("deviceType"), Value::from(ua.device_type.clone())),
-        (Value::from("appVersion"), Value::from(ua.app_version.clone())),
+        (
+            Value::from("deviceType"),
+            Value::from(ua.device_type.clone()),
+        ),
+        (
+            Value::from("appVersion"),
+            Value::from(ua.app_version.clone()),
+        ),
         (Value::from("osVersion"), Value::from(ua.os_version.clone())),
         (Value::from("timezone"), Value::from(ua.timezone.clone())),
         (Value::from("screen"), Value::from(ua.screen.clone())),
@@ -323,7 +329,10 @@ fn build_handshake_payload(cfg: &HandshakeConfig) -> Vec<u8> {
         (Value::from("arch"), Value::from(ua.arch.clone())),
         (Value::from("locale"), Value::from(ua.locale.clone())),
         (Value::from("buildNumber"), Value::from(ua.build_number)),
-        (Value::from("deviceName"), Value::from(ua.device_name.clone())),
+        (
+            Value::from("deviceName"),
+            Value::from(ua.device_name.clone()),
+        ),
         (
             Value::from("deviceLocale"),
             Value::from(ua.device_locale.clone()),

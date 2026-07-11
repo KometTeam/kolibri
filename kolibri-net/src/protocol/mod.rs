@@ -9,7 +9,9 @@ pub mod json;
 pub mod opcodes;
 pub mod packet;
 
-pub use codec::{decode, encode, encode_with_cmd, packet_total_len, CodecError, COMPRESSION_THRESHOLD};
+pub use codec::{
+    decode, encode, encode_with_cmd, packet_total_len, CodecError, COMPRESSION_THRESHOLD,
+};
 pub use framing::{OverflowError, PacketReceiver};
 #[cfg(feature = "json")]
 pub use json::{json_to_value, value_to_json, value_to_json_tagged};

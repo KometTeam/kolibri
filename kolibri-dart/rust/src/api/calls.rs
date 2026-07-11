@@ -28,7 +28,10 @@ pub struct CallParams {
 #[frb(sync)]
 pub fn decode_vcp(vcp: String, conversation_id: String) -> Option<CallParams> {
     let p = kolibri_net::calls::ConversationParams::decode(&vcp)?;
-    let ws2_url = p.ws2_url(&conversation_id, &kolibri_net::calls::Ws2ClientInfo::default());
+    let ws2_url = p.ws2_url(
+        &conversation_id,
+        &kolibri_net::calls::Ws2ClientInfo::default(),
+    );
     Some(CallParams {
         token: p.token.clone(),
         ws_endpoint: p.ws_endpoint.clone(),
@@ -111,10 +114,12 @@ impl CallSignaling {
         sdp_mid: String,
         sdp_mline_index: i64,
     ) -> Result<String, String> {
-        self.block(
-            self.inner
-                .transmit_candidate(participant_id, &candidate, &sdp_mid, sdp_mline_index),
-        )
+        self.block(self.inner.transmit_candidate(
+            participant_id,
+            &candidate,
+            &sdp_mid,
+            sdp_mline_index,
+        ))
     }
 
     pub fn change_media_settings(

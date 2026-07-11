@@ -8,9 +8,7 @@
 use std::time::Duration;
 
 use kolibri_net::protocol::opcodes;
-use kolibri_net::{
-    ClientConfig, HandshakeConfig, Session, SessionConfig, UserAgent,
-};
+use kolibri_net::{ClientConfig, HandshakeConfig, Session, SessionConfig, UserAgent};
 use rmpv::Value;
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -22,8 +20,7 @@ const BUILD_NUMBER: i64 = 6758;
 
 // APK signature / dex / so digests for the anti-spoof `mode` fingerprint
 // (from ChatCacheFingerprint)
-const SIGNATURE_DIGEST: &str =
-    "1684414033eb263e2c615f8b7df5ed8793850a07656304997fbf07e9e21e1e93";
+const SIGNATURE_DIGEST: &str = "1684414033eb263e2c615f8b7df5ed8793850a07656304997fbf07e9e21e1e93";
 const SO_DIGEST: &str = "90e2fb8745b17b42a10182f8d8ac590e3fca5b311e2ce2d5144fa2c18cb3090d";
 const DEX_DIGEST: &str = "0a6265f6e5d8231b9cba641f8c40475e6f3baeb06ed41b804b9bf7307aa4214e";
 
@@ -37,8 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    let device_id =
-        std::env::var("KOLIBRI_DEVICE_ID").unwrap_or_else(|_| "d1e9c0de-0000-4000-8000-kolibri0001".to_string());
+    let device_id = std::env::var("KOLIBRI_DEVICE_ID")
+        .unwrap_or_else(|_| "d1e9c0de-0000-4000-8000-kolibri0001".to_string());
     let instance_id = std::env::var("KOLIBRI_INSTANCE_ID")
         .unwrap_or_else(|_| "i1e9c0de-0000-4000-8000-kolibri0001".to_string());
 

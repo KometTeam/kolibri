@@ -29,4 +29,6 @@ pub use transport::{
 };
 
 #[cfg(feature = "transport")]
-pub use session::{HandshakeConfig, HandshakeInfo, Session, SessionConfig, SessionState, UserAgent};
+pub use session::{
+    HandshakeConfig, HandshakeInfo, Session, SessionConfig, SessionState, UserAgent,
+};

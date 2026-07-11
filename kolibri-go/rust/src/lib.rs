@@ -168,21 +168,26 @@ pub extern "C" fn kolibri_session_new(
     };
 
     let tap: Option<WireTap> = wire_cb.map(|cb| {
-        let ctx = WireCtx { cb, user: wire_user };
-        Arc::new(move |dir: Direction, cmd: u8, opcode: u16, seq: u16, payload: &[u8]| {
-            let ctx = &ctx;
-            let json = c_string(payload_to_json(payload));
-            let c_dir = c_string(dir.as_str().to_string());
-            let c_cmd = c_string(cmd_label(dir, cmd).to_string());
-            (ctx.cb)(
-                ctx.user,
-                c_dir.as_ptr(),
-                c_cmd.as_ptr(),
-                opcode,
-                seq,
-                json.as_ptr(),
-            );
-        }) as WireTap
+        let ctx = WireCtx {
+            cb,
+            user: wire_user,
+        };
+        Arc::new(
+            move |dir: Direction, cmd: u8, opcode: u16, seq: u16, payload: &[u8]| {
+                let ctx = &ctx;
+                let json = c_string(payload_to_json(payload));
+                let c_dir = c_string(dir.as_str().to_string());
+                let c_cmd = c_string(cmd_label(dir, cmd).to_string());
+                (ctx.cb)(
+                    ctx.user,
+                    c_dir.as_ptr(),
+                    c_cmd.as_ptr(),
+                    opcode,
+                    seq,
+                    json.as_ptr(),
+                );
+            },
+        ) as WireTap
     });
 
     let inner = Arc::new(Session::with_wire_tap(config, tap));
@@ -276,7 +281,8 @@ pub extern "C" fn kolibri_session_request_json(
         Err(e) => return err(e.to_string()),
     };
     let mut payload = Vec::new();
-    if rmpv::encode::write_value(&mut payload, &kolibri_net::protocol::json_to_value(&value)).is_err()
+    if rmpv::encode::write_value(&mut payload, &kolibri_net::protocol::json_to_value(&value))
+        .is_err()
     {
         return err("failed to encode request payload");
     }
@@ -744,8 +750,7 @@ pub extern "C" fn kolibri_call_change_media(
     out_json: *mut *mut c_char,
 ) -> *mut c_char {
     call_result(h, out_json, |c| {
-        c.rt
-            .block_on(c.inner.change_media_settings(audio, video, screen))
+        c.rt.block_on(c.inner.change_media_settings(audio, video, screen))
     })
 }
 

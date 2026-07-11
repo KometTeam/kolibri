@@ -100,7 +100,10 @@ async fn request_response_roundtrip() {
 
     assert!(resp.is_ok());
     assert_eq!(resp.opcode, opcodes::MSG_SEND);
-    assert_eq!(resp.seq, 1, "first request must use seq 1 like the Dart sender");
+    assert_eq!(
+        resp.seq, 1,
+        "first request must use seq 1 like the Dart sender"
+    );
     assert_eq!(resp.payload, payload);
 }
 
@@ -166,10 +169,12 @@ async fn wire_tap_sees_both_directions() {
         recorder.lock().unwrap().push((dir, opcode));
     });
 
-    let client =
-        Client::connect_with_tap(ClientConfig::new("127.0.0.1", addr.port()).insecure(true), Some(tap))
-            .await
-            .unwrap();
+    let client = Client::connect_with_tap(
+        ClientConfig::new("127.0.0.1", addr.port()).insecure(true),
+        Some(tap),
+    )
+    .await
+    .unwrap();
 
     client
         .request(opcodes::MSG_SEND, &msgpack_map(&[("a", "b")]))
@@ -177,8 +182,14 @@ async fn wire_tap_sees_both_directions() {
         .unwrap();
 
     let events = seen.lock().unwrap().clone();
-    assert!(events.contains(&(Direction::Out, opcodes::MSG_SEND)), "outgoing not tapped: {events:?}");
-    assert!(events.contains(&(Direction::In, opcodes::MSG_SEND)), "incoming not tapped: {events:?}");
+    assert!(
+        events.contains(&(Direction::Out, opcodes::MSG_SEND)),
+        "outgoing not tapped: {events:?}"
+    );
+    assert!(
+        events.contains(&(Direction::In, opcodes::MSG_SEND)),
+        "incoming not tapped: {events:?}"
+    );
 }
 
 #[tokio::test]

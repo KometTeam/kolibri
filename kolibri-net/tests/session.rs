@@ -5,9 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use kolibri_net::protocol::{codec, framing::PacketReceiver, opcodes, packet::cmd};
-use kolibri_net::{
-    ClientConfig, HandshakeConfig, Session, SessionConfig, SessionState, UserAgent,
-};
+use kolibri_net::{ClientConfig, HandshakeConfig, Session, SessionConfig, SessionState, UserAgent};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::time::timeout;
@@ -34,10 +32,7 @@ fn server_config() -> Arc<rustls::ServerConfig> {
 fn handshake_response() -> Vec<u8> {
     let value = rmpv::Value::Map(vec![
         (rmpv::Value::from("callsSeed"), rmpv::Value::from(7i64)),
-        (
-            rmpv::Value::from("device_name"),
-            rmpv::Value::from("Rusty"),
-        ),
+        (rmpv::Value::from("device_name"), rmpv::Value::from("Rusty")),
     ]);
     let mut out = Vec::new();
     rmpv::encode::write_value(&mut out, &value).unwrap();
@@ -62,12 +57,8 @@ async fn run_server(listener: TcpListener, acceptor: TlsAcceptor) {
             let req = codec::decode(&raw).unwrap();
             match req.opcode {
                 opcodes::SESSION_INIT => {
-                    let resp = codec::encode_with_cmd(
-                        cmd::OK,
-                        req.opcode,
-                        &handshake_response(),
-                        req.seq,
-                    );
+                    let resp =
+                        codec::encode_with_cmd(cmd::OK, req.opcode, &handshake_response(), req.seq);
                     tls.write_all(&resp).await.unwrap();
                     tls.flush().await.unwrap();
                 }
@@ -141,7 +132,10 @@ async fn request_routes_through_session() {
         rmpv::encode::write_value(&mut out, &value).unwrap();
         out
     };
-    let resp = session.request(opcodes::CHATS_LIST, &payload).await.unwrap();
+    let resp = session
+        .request(opcodes::CHATS_LIST, &payload)
+        .await
+        .unwrap();
     assert!(resp.is_ok());
     assert_eq!(resp.payload, payload);
 }

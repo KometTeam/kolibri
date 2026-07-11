@@ -97,7 +97,12 @@ pub async fn connect_tcp(
         }
     })
     .await
-    .unwrap_or_else(|_| Err(io::Error::new(io::ErrorKind::TimedOut, "proxy connect timed out")))
+    .unwrap_or_else(|_| {
+        Err(io::Error::new(
+            io::ErrorKind::TimedOut,
+            "proxy connect timed out",
+        ))
+    })
 }
 
 async fn http_connect(
@@ -186,7 +191,10 @@ async fn socks5_connect(
     let mut head = [0u8; 4];
     stream.read_exact(&mut head).await?;
     if head[1] != 0x00 {
-        return Err(proxy_err(&format!("SOCKS5 connect failed (reply {})", head[1])));
+        return Err(proxy_err(&format!(
+            "SOCKS5 connect failed (reply {})",
+            head[1]
+        )));
     }
     let skip = match head[3] {
         0x01 => 4,
@@ -231,8 +239,7 @@ fn proxy_err(msg: &str) -> io::Error {
 }
 
 fn base64_encode(bytes: &[u8]) -> String {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let b = [

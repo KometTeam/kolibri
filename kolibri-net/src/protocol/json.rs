@@ -164,9 +164,7 @@ mod tests {
 
     #[test]
     fn binary_becomes_base64_and_int_keys_stringify() {
-        let value = Value::Map(vec![
-            (Value::from(7), Value::Binary(vec![0xDE, 0xAD])),
-        ]);
+        let value = Value::Map(vec![(Value::from(7), Value::Binary(vec![0xDE, 0xAD]))]);
         let json = value_to_json(&value);
         assert_eq!(json["7"], "3q0=");
     }
@@ -175,7 +173,10 @@ mod tests {
     fn tagged_binary_round_trips_flat_stays_base64() {
         use super::{json_to_value, value_to_json_tagged};
         let value = Value::Map(vec![
-            (Value::from("fp"), Value::Binary(vec![0xDE, 0xAD, 0xBE, 0xEF])),
+            (
+                Value::from("fp"),
+                Value::Binary(vec![0xDE, 0xAD, 0xBE, 0xEF]),
+            ),
             (Value::from("name"), Value::from("x")),
         ]);
         // tagged output round-trips back to the same msgpack Binary
@@ -198,7 +199,11 @@ mod tests {
         });
         let value = json_to_value(&json);
         let map = value.as_map().unwrap();
-        let get = |k: &str| map.iter().find(|(mk, _)| mk.as_str() == Some(k)).map(|(_, v)| v);
+        let get = |k: &str| {
+            map.iter()
+                .find(|(mk, _)| mk.as_str() == Some(k))
+                .map(|(_, v)| v)
+        };
         assert_eq!(get("id").unwrap().as_i64(), Some(42));
         assert_eq!(get("ok").unwrap().as_bool(), Some(true));
         assert_eq!(get("fp").unwrap().as_slice(), Some(&[0xDE, 0xAD][..]));
