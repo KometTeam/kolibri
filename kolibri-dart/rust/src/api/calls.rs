@@ -11,7 +11,7 @@ pub struct IceServer {
     pub credential: Option<String>,
 }
 
-/// Decoded `vcp` call params, plus the ready ws2 URL for the given conversation.
+/// decoded vcp call params, plus the ready ws2 url for the given conversation
 pub struct CallParams {
     pub token: String,
     pub ws_endpoint: String,
@@ -51,8 +51,8 @@ pub fn decode_vcp(vcp: String, conversation_id: String) -> Option<CallParams> {
     })
 }
 
-/// ws2 call-signaling client. Command results and notifications cross as JSON
-/// strings (decode with `dart:convert`).
+/// ws2 call-signaling client. command results and notifications cross as JSON
+/// strings, decode with dart:convert.
 pub struct CallSignaling {
     rt: Arc<Runtime>,
     inner: Arc<kolibri_net::calls::Ws2Signaling>,
@@ -120,14 +120,14 @@ impl CallSignaling {
         self.block(self.inner.change_media_settings(audio, video, screen))
     }
 
-    /// Send a raw command; `extra_json` is a JSON object string.
+    /// raw command; extra_json is a JSON object string
     pub fn send_command(&self, command: String, extra_json: String) -> Result<String, String> {
         let extra: serde_json::Value =
             serde_json::from_str(&extra_json).map_err(|e| e.to_string())?;
         self.block(self.inner.send_command(&command, extra))
     }
 
-    /// Stream of ws2 notifications as JSON strings.
+    /// ws2 notifications as JSON strings
     pub fn notifications(&self, sink: StreamSink<String>) {
         let mut rx = self.inner.notifications();
         self.rt.spawn(async move {
@@ -160,7 +160,7 @@ impl CallSignaling {
     }
 }
 
-/// Parsed ws2 `connection` notification.
+/// parsed ws2 `connection` notification
 pub struct ConnectionInfo {
     pub topology: Option<String>,
     pub is_sfu: bool,
@@ -169,8 +169,7 @@ pub struct ConnectionInfo {
     pub ice_servers: Vec<IceServer>,
 }
 
-/// Parse a `connection` notification (JSON string). `peer` is the participant
-/// that isn't `my_user_id`.
+/// connection notification (JSON string). peer is the participant that isn't my_user_id.
 #[flutter_rust_bridge::frb(sync)]
 pub fn parse_connection(notification_json: String, my_user_id: i64) -> ConnectionInfo {
     let value: serde_json::Value =
@@ -193,8 +192,8 @@ pub fn parse_connection(notification_json: String, my_user_id: i64) -> Connectio
     }
 }
 
-/// SDP or ICE candidate from a `transmitted-data` notification. `kind` is
-/// "sdp" or "candidate"; the matching fields are set.
+/// SDP or ICE candidate from a `transmitted-data` notification. kind is "sdp" or
+/// "candidate"; only the matching fields are set.
 pub struct TransmittedData {
     pub kind: String,
     pub sdp_type: Option<String>,

@@ -7,9 +7,8 @@ use super::{MediaError, ProgressFn};
 
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
 
-/// Single POST with a `Content-Range` covering the whole body. status 200 = ok.
-/// `user_agent` should be built from the handshake device (see
-/// `UserAgent::http_user_agent`).
+/// single POST with a `Content-Range` covering the whole body. status 200 = ok.
+/// `user_agent` from the handshake device (see `UserAgent::http_user_agent`).
 pub async fn upload_file(
     url: &str,
     data: &[u8],
@@ -55,7 +54,7 @@ pub async fn upload_file(
 }
 
 /// `multipart/form-data`; caller extracts `photoToken` from the JSON body.
-/// `user_agent` should be built from the handshake device.
+/// `user_agent` from the handshake device.
 pub async fn upload_photo(
     url: &str,
     data: &[u8],
@@ -104,7 +103,7 @@ pub async fn upload_photo(
     .await
 }
 
-/// Parallel-chunk video upload with resume. GET handshake returns the resume
+/// parallel-chunk video upload with resume. GET handshake returns the resume
 /// offset, then each `chunk_size` range is POSTed by up to `concurrency` workers.
 pub async fn upload_video(
     url: &str,

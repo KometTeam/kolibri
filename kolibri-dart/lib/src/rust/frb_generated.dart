@@ -2128,13 +2128,13 @@ class CallSignalingImpl extends RustOpaque implements CallSignaling {
         that: this,
       );
 
-  /// Stream of ws2 notifications as JSON strings.
+  /// ws2 notifications as JSON strings
   Stream<String> notifications() =>
       RustLib.instance.api.crateApiCallsCallSignalingNotifications(
         that: this,
       );
 
-  /// Send a raw command; `extra_json` is a JSON object string.
+  /// raw command; extra_json is a JSON object string
   Future<String> sendCommand(
           {required String command, required String extraJson}) =>
       RustLib.instance.api.crateApiCallsCallSignalingSendCommand(
@@ -2179,7 +2179,7 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         RustLib.instance.api.rust_arc_decrement_strong_count_KolibriSessionPtr,
   );
 
-  /// Connect and run the sessionInit handshake.
+  /// connect + sessionInit handshake
   Future<HandshakeInfo> connect() =>
       RustLib.instance.api.crateApiSessionKolibriSessionConnect(
         that: this,
@@ -2190,19 +2190,19 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         that: this,
       );
 
-  /// Server pushes; yields until the session is dropped.
+  /// server pushes; yields until the session is dropped
   Stream<PushEvent> pushes() =>
       RustLib.instance.api.crateApiSessionKolibriSessionPushes(
         that: this,
       );
 
-  /// Send a request, await the response payload (raw msgpack). Errors on server error or timeout.
+  /// awaits the response payload (raw msgpack); errors on server error or timeout
   Future<Uint8List> request(
           {required int opcode, required List<int> payload}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionRequest(
           that: this, opcode: opcode, payload: payload);
 
-  /// Fire-and-forget send; returns the seq number.
+  /// fire-and-forget; returns the seq number
   int send({required int opcode, required List<int> payload}) =>
       RustLib.instance.api.crateApiSessionKolibriSessionSend(
           that: this, opcode: opcode, payload: payload);
@@ -2211,8 +2211,8 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
         that: this,
       );
 
-  /// Upload a generic file to a CDN URL. Streams progress, then Done/Error.
-  /// `user_agent` defaults to the app string when null.
+  /// generic file upload to a CDN url. streams progress, then Done/Error.
+  /// user_agent defaults to the session's handshake device.
   Stream<UploadEvent> uploadFile(
           {required String url,
           required List<int> data,
@@ -2225,7 +2225,7 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
           filename: filename,
           userAgent: userAgent);
 
-  /// Upload a photo via multipart/form-data. Parse `photoToken` from the `Done` body.
+  /// photo upload, multipart/form-data. photoToken comes back in the Done body.
   Stream<UploadEvent> uploadPhoto(
           {required String url,
           required List<int> data,
@@ -2238,7 +2238,7 @@ class KolibriSessionImpl extends RustOpaque implements KolibriSession {
           filename: filename,
           userAgent: userAgent);
 
-  /// Upload a video in parallel resumable chunks. `Done{status:200}` means success.
+  /// video upload, parallel resumable chunks. Done{status:200} means success.
   Stream<UploadEvent> uploadVideo(
           {required String url,
           required List<int> data,

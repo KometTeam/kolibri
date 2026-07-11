@@ -2,7 +2,7 @@ use base64::Engine;
 
 use crate::protocol::compress::decompress_lz4_block;
 
-/// An ICE server in the shape a WebRTC stack expects.
+/// ICE server in the shape a WebRTC stack expects.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IceServer {
     pub urls: Vec<String>,
@@ -10,10 +10,10 @@ pub struct IceServer {
     pub credential: Option<String>,
 }
 
-/// Call connection params (`vcp`) the server sends in the incoming-call push
-/// (opcode 137) and in the outgoing-call response.
+/// Call connection params (`vcp`), sent in the incoming-call push (opcode 137)
+/// and the outgoing-call response.
 ///
-/// Wire format: `<rawLen>:<base64(LZ4-block(JSON))>`, JSON keys are short.
+/// wire format: `<rawLen>:<base64(LZ4-block(JSON))>`, JSON keys are short.
 #[derive(Debug, Clone)]
 pub struct ConversationParams {
     pub token: String,
@@ -89,7 +89,7 @@ impl ConversationParams {
         servers
     }
 
-    /// Valid for another few seconds. `now_secs` is the current unix time.
+    /// treats "expires within 5s" as expired. `now_secs` is unix time.
     pub fn is_expired(&self, now_secs: i64) -> bool {
         match self.expires_at {
             Some(exp) => now_secs >= exp - 5,
@@ -97,7 +97,7 @@ impl ConversationParams {
         }
     }
 
-    /// The calls user id, taken from the part after `:` in the TURN username.
+    /// calls user id, the part after the last `:` in the TURN username.
     pub fn user_id(&self) -> i64 {
         self.turn_user
             .as_deref()
@@ -106,7 +106,7 @@ impl ConversationParams {
             .unwrap_or(0)
     }
 
-    /// Build the ws2 connect URL for an incoming call (from these params).
+    /// ws2 connect URL for an incoming call.
     pub fn ws2_url(&self, conversation_id: &str, client: &Ws2ClientInfo) -> String {
         let params = [
             ("userId", self.user_id().to_string()),
@@ -125,7 +125,7 @@ impl ConversationParams {
     }
 }
 
-/// Client-side ws2 params that don't come from the server.
+/// ws2 params that don't come from the server.
 #[derive(Debug, Clone)]
 pub struct Ws2ClientInfo {
     pub capabilities: String,
@@ -149,8 +149,8 @@ impl Default for Ws2ClientInfo {
     }
 }
 
-/// Append client params to an outgoing-call `endpoint` (which already carries
-/// the token and conversation/user ids in its query), overriding on key clash.
+/// append client params to an outgoing-call `endpoint` (already carries token
+/// and conversation/user ids in its query), overriding on key clash.
 pub fn ws2_url_from_endpoint(endpoint: &str, client: &Ws2ClientInfo) -> String {
     let extra = [
         ("platform", client.platform.clone()),
@@ -190,7 +190,7 @@ fn split_csv(v: Option<&serde_json::Value>) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Replace the whole query of `base` with `params`.
+/// replace the whole query of `base` with `params`.
 fn set_query(base: &str, params: &[(&str, String)]) -> String {
     let path = base.split('?').next().unwrap_or(base);
     let query = params
@@ -201,7 +201,7 @@ fn set_query(base: &str, params: &[(&str, String)]) -> String {
     format!("{path}?{query}")
 }
 
-/// Merge `extra` into the existing query of `base` (extra overrides on clash).
+/// merge `extra` into the existing query of `base`, extra wins on clash.
 fn merge_query(base: &str, extra: &[(&str, String)]) -> String {
     let (path, existing) = base.split_once('?').unwrap_or((base, ""));
     let mut pairs: Vec<(String, String)> = Vec::new();

@@ -1,13 +1,13 @@
 //! Anti-spoof fingerprint for the auth flow (`mode` in authRequest,
 //! `chatCacheFingerprint` in login).
 //!
-//! The three digests (APK signature / dex / native-lib hashes) come from the
-//! caller, not baked in, so they can change per app version or flavor.
+//! the three digests (APK signature/dex/native-lib hashes) come from the caller,
+//! not baked in, so they can change per app version or flavor.
 
 use sha2::{Digest, Sha256};
 
 /// 96-byte fingerprint: three SHA-256 of `digest || int64_be(calls_seed) ||
-/// utf8(device_id)`, concatenated in signature / dex / so order.
+/// utf8(device_id)`, concatenated in signature/dex/so order.
 pub fn chat_cache_fingerprint(
     signature_digest: &[u8],
     dex_digest: &[u8],

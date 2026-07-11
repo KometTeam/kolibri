@@ -22,8 +22,8 @@ pub enum SessionState {
     Online,
 }
 
-/// Fields parsed from the sessionInit response; `payload` keeps the raw map so
-/// the host can pull anything else (`reg-country-code`, `location`, ...).
+/// fields pulled from the sessionInit response; `payload` keeps the raw map so
+/// the host can grab anything else (`reg-country-code`, `location`, ...).
 #[derive(Debug, Clone)]
 pub struct HandshakeInfo {
     pub calls_seed: Option<i64>,
@@ -63,7 +63,7 @@ impl Shared {
     }
 }
 
-/// Managed session: connects, handshakes, keeps alive with pings, and optionally
+/// Managed session: connects, handshakes, pings to stay alive, and optionally
 /// reconnects with backoff. Requests and pushes route through whichever
 /// underlying [`Client`] is currently connected.
 pub struct Session {
@@ -87,9 +87,9 @@ impl Session {
         }
     }
 
-    /// Resolves once online. If the first attempt fails with `auto_reconnect`
+    /// resolves once online. if the first attempt fails with `auto_reconnect`
     /// set, the supervisor keeps retrying in the background but this call still
-    /// returns the first error.
+    /// returns that first error.
     pub async fn connect(&self) -> Result<HandshakeInfo, TransportError> {
         self.shared.stop.store(false, Ordering::SeqCst);
         let (first_tx, first_rx) = oneshot::channel();
@@ -118,7 +118,7 @@ impl Session {
         }
     }
 
-    /// Stream survives reconnects; pushes from every underlying connection land here.
+    /// stream survives reconnects; pushes from every underlying connection land here.
     pub fn subscribe(&self) -> broadcast::Receiver<Packet> {
         self.shared.push_tx.subscribe()
     }
@@ -127,8 +127,8 @@ impl Session {
         *self.shared.state_tx.borrow()
     }
 
-    /// HTTP User-Agent for media uploads, derived from this session's handshake
-    /// device (opcode 6) so uploads look like the same device.
+    /// HTTP User-Agent for media uploads, from this session's handshake device
+    /// (opcode 6) so uploads look like the same device.
     pub fn http_user_agent(&self) -> String {
         self.shared.config.handshake.user_agent.http_user_agent()
     }
@@ -137,7 +137,7 @@ impl Session {
         self.shared.state_tx.subscribe()
     }
 
-    /// Stop and disable auto-reconnect.
+    /// stop and disable auto-reconnect.
     pub fn disconnect(&self) {
         self.shared.stop.store(true, Ordering::SeqCst);
         if let Some(client) = self.shared.client.lock().unwrap().take() {
@@ -156,7 +156,7 @@ impl Drop for Session {
     }
 }
 
-/// Supervisor loop: connect, handshake, maintain, backoff, reconnect.
+/// supervisor loop: connect, handshake, maintain, backoff, reconnect.
 async fn supervise(
     shared: Arc<Shared>,
     first_tx: oneshot::Sender<Result<HandshakeInfo, TransportError>>,
@@ -219,7 +219,7 @@ async fn connect_and_handshake(
     Ok((client, info))
 }
 
-/// Pings on the interval, forwards pushes into the session-wide channel, and
+/// pings on the interval, forwards pushes into the session-wide channel,
 /// returns once the connection drops.
 async fn maintain(shared: &Shared, client: Arc<Client>) {
     let ping_client = client.clone();

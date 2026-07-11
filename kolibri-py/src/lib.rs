@@ -1,5 +1,5 @@
-//! Python bindings for `kolibri-net`. Blocking `Session` owning its own tokio
-//! runtime; msgpack payloads convert to/from native Python dicts/lists.
+//! python bindings for kolibri-net. blocking Session owns its own tokio runtime;
+//! msgpack payloads convert to/from native python dicts/lists.
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -17,7 +17,7 @@ use rmpv::Value;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
 
-/// Blocking session; each method drives the internal tokio runtime to completion.
+/// each method blocks the caller, driving the tokio runtime to completion
 #[pyclass]
 struct Session {
     rt: Arc<Runtime>,
@@ -108,7 +108,7 @@ impl Session {
         Ok(Self { rt, inner, push_rx })
     }
 
-    /// Connect and run the sessionInit handshake. Returns {calls_seed, device_name, payload}.
+    /// connect + sessionInit handshake => {calls_seed, device_name, payload}
     fn connect(&self, py: Python<'_>) -> PyResult<PyObject> {
         let rt = self.rt.clone();
         let inner = self.inner.clone();
@@ -123,7 +123,7 @@ impl Session {
         Ok(dict.into_any().unbind())
     }
 
-    /// Send a request, return the decoded response. Raises on a server error packet or timeout.
+    /// decoded response; raises on server error packet or timeout
     fn request(&self, py: Python<'_>, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<PyObject> {
         let bytes = encode_value(&py_to_value(payload)?);
         let rt = self.rt.clone();
@@ -137,14 +137,14 @@ impl Session {
         Ok(value_to_py(py, &value)?.unbind())
     }
 
-    /// Fire-and-forget send; returns the sequence number.
+    /// fire-and-forget; returns the seq number
     fn send(&self, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<u16> {
         let bytes = encode_value(&py_to_value(payload)?);
         self.inner.send(opcode, &bytes).map_err(to_pyerr)
     }
 
-    /// Upload a generic file to a CDN URL. `progress`, if given, gets (sent, total).
-    /// `user_agent` defaults to the session's handshake device.
+    /// generic file upload to a CDN url. progress cb, if given, gets (sent, total).
+    /// user_agent defaults to the session's handshake device.
     #[pyo3(signature = (url, data, filename, progress = None, user_agent = None))]
     fn upload_file(
         &self,
@@ -170,7 +170,7 @@ impl Session {
         media_response(py, resp)
     }
 
-    /// Upload a photo via multipart/form-data. Parse `photoToken` from the JSON body.
+    /// photo upload, multipart/form-data. photoToken comes back in the JSON body.
     #[pyo3(signature = (url, data, filename, progress = None, user_agent = None))]
     fn upload_photo(
         &self,
@@ -196,7 +196,7 @@ impl Session {
         media_response(py, resp)
     }
 
-    /// Upload a video in parallel resumable chunks. `progress` gets (sent, total).
+    /// video upload, parallel resumable chunks. progress gets (sent, total).
     #[pyo3(signature = (url, data, chunk_size = 2 * 1024 * 1024, concurrency = 4, progress = None))]
     fn upload_video(
         &self,
@@ -218,7 +218,7 @@ impl Session {
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))
     }
 
-    /// Next server push as {opcode, payload}, or None on timeout.
+    /// next server push as {opcode, payload}, None on timeout
     #[pyo3(signature = (timeout_secs = None))]
     fn next_push(&self, py: Python<'_>, timeout_secs: Option<f64>) -> PyResult<Option<PyObject>> {
         let rt = self.rt.clone();
@@ -247,7 +247,7 @@ impl Session {
         }
     }
 
-    /// Current session state: "disconnected" | "connecting" | "connected" | "online".
+    /// "disconnected" | "connecting" | "connected" | "online"
     fn state(&self) -> &'static str {
         match self.inner.state() {
             SessionState::Disconnected => "disconnected",
@@ -257,14 +257,14 @@ impl Session {
         }
     }
 
-    /// Stop the session; also disables auto-reconnect.
+    /// stops the session and disables auto-reconnect
     fn disconnect(&self) {
         self.inner.disconnect();
     }
 }
 
-/// Wrap a Python `(sent, total)` callable into a core progress callback. Upload
-/// runs with the GIL released; the callback re-acquires it.
+/// wrap a python (sent, total) callable into a core progress cb. upload runs with
+/// the GIL released, so the callback re-acquires it.
 fn py_progress(progress: Option<PyObject>) -> Option<kolibri_net::media::ProgressFn> {
     progress.map(|cb| {
         let cb = std::sync::Arc::new(cb);
@@ -296,7 +296,7 @@ fn encode_value(value: &Value) -> Vec<u8> {
     out
 }
 
-/// Python object -> msgpack value. bool checked before int (Python bool subclasses int).
+/// bool checked before int (python bool subclasses int)
 fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
     if obj.is_none() {
         return Ok(Value::Nil);
@@ -399,7 +399,7 @@ fn hex_bytes(s: &str) -> Vec<u8> {
 }
 
 /// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
-/// signature/dex/so are raw digest bytes; omitted ones fall back to app defaults.
+/// signature/dex/so are raw digest bytes; omitted ones fall back to app defaults
 #[pyfunction]
 #[pyo3(signature = (calls_seed, device_id, signature = None, dex = None, so = None))]
 fn auth_mode<'py>(
@@ -505,8 +505,7 @@ fn py_to_json(obj: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
     )))
 }
 
-/// Decode a `vcp` call-params string into a dict. With `conversation_id`, the
-/// dict also includes the ready `ws2_url`.
+/// vcp call-params string => dict. with conversation_id, also includes ws2_url.
 #[pyfunction]
 #[pyo3(signature = (vcp, conversation_id = None))]
 fn decode_vcp(
@@ -545,8 +544,8 @@ fn decode_vcp(
     Ok(Some(dict.into_any().unbind()))
 }
 
-/// ws2 call-signaling client. Connects on construction; blocking methods drive
-/// the internal runtime.
+/// ws2 call-signaling client. connects on construction; methods block on the
+/// internal runtime.
 #[pyclass]
 struct CallSignaling {
     rt: Arc<Runtime>,
@@ -633,7 +632,7 @@ impl CallSignaling {
         })
     }
 
-    /// Send a raw command with a dict of extra fields.
+    /// raw command with a dict of extra fields
     fn send_command(
         &self,
         py: Python<'_>,
@@ -647,7 +646,7 @@ impl CallSignaling {
         })
     }
 
-    /// Wait for the next ws2 notification. Returns a dict or None on timeout.
+    /// next ws2 notification as a dict, None on timeout
     #[pyo3(signature = (timeout_secs = None))]
     fn next_notification(
         &self,
@@ -700,8 +699,8 @@ impl CallSignaling {
     }
 }
 
-/// Parse a ws2 `connection` notification into `{topology, is_sfu, participants,
-/// ice_servers}` (plus `peer` when `my_user_id` is given).
+/// ws2 `connection` notification => {topology, is_sfu, participants, ice_servers},
+/// plus `peer` when my_user_id is given
 #[pyfunction]
 #[pyo3(signature = (notification, my_user_id = None))]
 fn parse_connection(
@@ -729,8 +728,8 @@ fn parse_connection(
     Ok(dict.into_any().unbind())
 }
 
-/// Parse a ws2 `transmitted-data` notification into `{kind: "sdp", type, sdp}` or
-/// `{kind: "candidate", candidate, sdp_mid, sdp_mline_index}`, or None.
+/// ws2 `transmitted-data` notification => {kind: "sdp", type, sdp} or
+/// {kind: "candidate", candidate, sdp_mid, sdp_mline_index}, or None
 #[pyfunction]
 fn parse_transmitted_data(
     py: Python<'_>,

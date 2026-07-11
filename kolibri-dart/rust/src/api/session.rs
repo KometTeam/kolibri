@@ -8,7 +8,7 @@ use kolibri_net::{
 };
 use tokio::runtime::Runtime;
 
-/// Device + connection options. Device fields feed the sessionInit handshake.
+/// device + connection options. device fields feed the sessionInit handshake.
 pub struct SessionOptions {
     pub host: String,
     pub port: u16,
@@ -31,27 +31,27 @@ pub struct SessionOptions {
     pub insecure_tls: bool,
 }
 
-/// sessionInit handshake result. `payload` is raw MessagePack; decode it Dart-side.
+/// sessionInit handshake result. payload is raw msgpack, decode it dart-side.
 pub struct HandshakeInfo {
     pub calls_seed: Option<i64>,
     pub device_name: Option<String>,
     pub payload: Vec<u8>,
 }
 
-/// Server push; `payload` is raw MessagePack.
+/// server push; payload is raw msgpack
 pub struct PushEvent {
     pub opcode: u16,
     pub payload: Vec<u8>,
 }
 
-/// Upload events: progress updates, then a terminal `Done` (status + body) or `Error`.
+/// progress updates, then a terminal Done (status + body) or Error
 pub enum UploadEvent {
     Progress { sent: u64, total: u64 },
     Done { status: u16, body: Vec<u8> },
     Error { message: String },
 }
 
-/// Drive an upload, forwarding progress + terminal result to `sink`.
+/// run an upload, forwarding progress + terminal result to sink
 async fn drive_upload<F, Fut>(sink: StreamSink<UploadEvent>, upload: F)
 where
     F: FnOnce(kolibri_net::media::ProgressFn) -> Fut,
@@ -80,8 +80,7 @@ where
     let _ = drain.await;
 }
 
-/// Managed Kolibri session. frb runs the blocking methods on a worker thread, so
-/// Dart sees `Future`s.
+/// frb runs the blocking methods on a worker thread, so dart sees Futures
 pub struct KolibriSession {
     rt: Arc<Runtime>,
     inner: Arc<Session>,
@@ -125,7 +124,7 @@ impl KolibriSession {
         Ok(KolibriSession { rt, inner })
     }
 
-    /// Connect and run the sessionInit handshake.
+    /// connect + sessionInit handshake
     pub fn connect(&self) -> Result<HandshakeInfo, String> {
         let info = self
             .rt
@@ -141,7 +140,7 @@ impl KolibriSession {
         })
     }
 
-    /// Send a request, await the response payload (raw msgpack). Errors on server error or timeout.
+    /// awaits the response payload (raw msgpack); errors on server error or timeout
     pub fn request(&self, opcode: u16, payload: Vec<u8>) -> Result<Vec<u8>, String> {
         let packet = self
             .rt
@@ -150,7 +149,7 @@ impl KolibriSession {
         Ok(packet.payload)
     }
 
-    /// Fire-and-forget send; returns the seq number.
+    /// fire-and-forget; returns the seq number
     #[frb(sync)]
     pub fn send(&self, opcode: u16, payload: Vec<u8>) -> Result<u32, String> {
         self.inner
@@ -159,8 +158,8 @@ impl KolibriSession {
             .map_err(|e| e.to_string())
     }
 
-    /// Upload a generic file to a CDN URL. Streams progress, then Done/Error.
-    /// `user_agent` defaults to the session's handshake device.
+    /// generic file upload to a CDN url. streams progress, then Done/Error.
+    /// user_agent defaults to the session's handshake device.
     pub fn upload_file(
         &self,
         url: String,
@@ -180,7 +179,7 @@ impl KolibriSession {
         }));
     }
 
-    /// Upload a photo via multipart/form-data. Parse `photoToken` from the `Done` body.
+    /// photo upload, multipart/form-data. photoToken comes back in the Done body.
     pub fn upload_photo(
         &self,
         url: String,
@@ -200,7 +199,7 @@ impl KolibriSession {
         }));
     }
 
-    /// Upload a video in parallel resumable chunks. `Done{status:200}` means success.
+    /// video upload, parallel resumable chunks. Done{status:200} means success.
     pub fn upload_video(
         &self,
         url: String,
@@ -227,7 +226,7 @@ impl KolibriSession {
         }));
     }
 
-    /// Server pushes; yields until the session is dropped.
+    /// server pushes; yields until the session is dropped
     pub fn pushes(&self, sink: StreamSink<PushEvent>) {
         let mut rx = self.inner.subscribe();
         self.rt.spawn(async move {
@@ -261,7 +260,7 @@ impl KolibriSession {
 }
 
 /// 96-byte anti-spoof fingerprint (authRequest `mode` / login `chatCacheFingerprint`).
-/// signature/dex/so are raw digest bytes, passed in so they can change per app version.
+/// signature/dex/so are raw digest bytes, passed in so they can change per app version
 #[frb(sync)]
 pub fn auth_mode(
     signature: Vec<u8>,

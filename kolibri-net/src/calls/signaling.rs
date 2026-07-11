@@ -15,18 +15,18 @@ use super::CallError;
 const NOTIF_CAPACITY: usize = 256;
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
 
-/// Default ws2 User-Agent (the app's WebSocket lib). Pass your own to
+/// default ws2 User-Agent (the app's WebSocket lib). override via
 /// [`Ws2Signaling::connect`].
 pub const DEFAULT_USER_AGENT: &str = "okhttp/4.12.0";
 
-/// Signaling client for a call over the ws2 WebSocket. Carries SDP offer/answer,
-/// ICE candidates, accept/hangup, and SFU negotiation as JSON.
+/// Call signaling over the ws2 WebSocket: SDP offer/answer, ICE candidates,
+/// accept/hangup, SFU negotiation, all as JSON.
 ///
-/// Envelope:
+/// envelope:
 /// - request:      `{"command": ..., ..., "sequence": N}`
 /// - response:     `{"sequence": N, "response": "<command>", "type": "response"}`
 /// - notification: `{..., "notification": "<name>", "type": "notification"}`
-/// - keepalive:    a text frame `ping`, answered with `pong`
+/// - keepalive:    text frame `ping`, answered with `pong`
 pub struct Ws2Signaling {
     seq: AtomicI64,
     write_tx: mpsc::UnboundedSender<String>,
@@ -96,7 +96,7 @@ impl Ws2Signaling {
         })
     }
 
-    /// Server notifications (`type == "notification"`). Filter on `notification`.
+    /// server notifications (`type == "notification"`); filter on `notification`.
     pub fn notifications(&self) -> broadcast::Receiver<Value> {
         self.notif_tx.subscribe()
     }
@@ -105,7 +105,7 @@ impl Ws2Signaling {
         *self.connected_tx.borrow()
     }
 
-    /// Send a command and await the response. Errors if the response carries one.
+    /// send a command, await the response; errors if the response carries one.
     pub async fn send_command(&self, command: &str, extra: Value) -> Result<Value, CallError> {
         if !self.is_connected() {
             return Err(CallError::Closed);
@@ -145,7 +145,7 @@ impl Ws2Signaling {
         Ok(resp)
     }
 
-    /// Send an SDP offer/answer to another participant.
+    /// SDP offer/answer to another participant.
     pub async fn transmit_sdp(
         &self,
         participant_id: i64,
@@ -165,7 +165,7 @@ impl Ws2Signaling {
         .await
     }
 
-    /// Send a trickle ICE candidate to another participant.
+    /// trickle ICE candidate to another participant.
     pub async fn transmit_candidate(
         &self,
         participant_id: i64,

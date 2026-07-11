@@ -17,8 +17,7 @@ Future<CallSignaling> connectCallSignaling(
     RustLib.instance.api
         .crateApiCallsConnectCallSignaling(url: url, userAgent: userAgent);
 
-/// Parse a `connection` notification (JSON string). `peer` is the participant
-/// that isn't `my_user_id`.
+/// connection notification (JSON string). peer is the participant that isn't my_user_id.
 ConnectionInfo parseConnection(
         {required String notificationJson, required PlatformInt64 myUserId}) =>
     RustLib.instance.api.crateApiCallsParseConnection(
@@ -41,10 +40,10 @@ abstract class CallSignaling implements RustOpaqueInterface {
 
   bool isConnected();
 
-  /// Stream of ws2 notifications as JSON strings.
+  /// ws2 notifications as JSON strings
   Stream<String> notifications();
 
-  /// Send a raw command; `extra_json` is a JSON object string.
+  /// raw command; extra_json is a JSON object string
   Future<String> sendCommand(
       {required String command, required String extraJson});
 
@@ -60,7 +59,7 @@ abstract class CallSignaling implements RustOpaqueInterface {
       required String sdp});
 }
 
-/// Decoded `vcp` call params, plus the ready ws2 URL for the given conversation.
+/// decoded vcp call params, plus the ready ws2 url for the given conversation
 class CallParams {
   final String token;
   final String wsEndpoint;
@@ -116,7 +115,7 @@ class CallParams {
           ws2Url == other.ws2Url;
 }
 
-/// Parsed ws2 `connection` notification.
+/// parsed ws2 `connection` notification
 class ConnectionInfo {
   final String? topology;
   final bool isSfu;
@@ -176,8 +175,8 @@ class IceServer {
           credential == other.credential;
 }
 
-/// SDP or ICE candidate from a `transmitted-data` notification. `kind` is
-/// "sdp" or "candidate"; the matching fields are set.
+/// SDP or ICE candidate from a `transmitted-data` notification. kind is "sdp" or
+/// "candidate"; only the matching fields are set.
 class TransmittedData {
   final String kind;
   final String? sdpType;

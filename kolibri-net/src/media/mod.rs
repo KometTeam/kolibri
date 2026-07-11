@@ -1,7 +1,7 @@
 //! Hand-rolled HTTP(S) client for CDN uploads (reuses the transport's tokio +
-//! rustls). The CDN wants exact request shapes: single-POST files, multipart
-//! photos, resumable parallel-chunk video. Control plane (upload URL, send
-//! message) stays on the main protocol socket via [`crate::transport`].
+//! rustls). CDN wants exact request shapes: single-POST files, multipart photos,
+//! resumable parallel-chunk video. Control plane (upload URL, send message) stays
+//! on the main protocol socket via [`crate::transport`].
 
 mod http;
 mod upload;

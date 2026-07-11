@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::transport::ClientConfig;
 
 /// `userAgent` sub-map of the sessionInit handshake. Host supplies the device
-/// values; field names and nesting stay here so every client sends the same shape.
+/// values; field names/nesting live here so every client sends the same shape.
 #[derive(Debug, Clone)]
 pub struct UserAgent {
     pub device_type: String,
@@ -20,8 +20,8 @@ pub struct UserAgent {
 }
 
 impl UserAgent {
-    /// The CDN/HTTP User-Agent for media uploads, built from the same device
-    /// fields sent in the handshake (opcode 6) so both are consistent.
+    /// CDN/HTTP User-Agent for media uploads, from the same device fields sent in
+    /// the handshake (opcode 6) so both agree.
     /// e.g. `OKMessages/26.20.2 (Android 14; Google Pixel 8; xxhdpi 420dpi 1080x2400)`
     pub fn http_user_agent(&self) -> String {
         format!(
@@ -31,7 +31,7 @@ impl UserAgent {
     }
 }
 
-/// Everything needed to build the `sessionInit` (opcode 6) payload.
+/// inputs for the `sessionInit` (opcode 6) payload.
 #[derive(Debug, Clone)]
 pub struct HandshakeConfig {
     pub instance_id: String,

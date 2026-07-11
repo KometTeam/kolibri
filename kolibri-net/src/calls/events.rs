@@ -2,8 +2,8 @@ use serde_json::Value;
 
 use super::vcp::IceServer;
 
-/// Parsed ws2 `connection` notification: call topology, participants, and the
-/// ICE servers to use (from `conversationParams`, authoritative over the vcp).
+/// ws2 `connection` notification: topology, participants, and ICE servers
+/// (from `conversationParams`, authoritative over the vcp).
 #[derive(Debug, Clone)]
 pub struct ConnectionInfo {
     pub topology: Option<String>,
@@ -16,7 +16,7 @@ impl ConnectionInfo {
         self.topology.as_deref() == Some("SERVER")
     }
 
-    /// The participant that isn't us, i.e. the peer to answer.
+    /// the participant that isn't us, the peer to answer.
     pub fn peer_of(&self, my_user_id: i64) -> Option<i64> {
         self.participants
             .iter()
@@ -25,8 +25,7 @@ impl ConnectionInfo {
     }
 }
 
-/// Payload of a `transmitted-data` notification: an SDP offer/answer or an ICE
-/// candidate.
+/// payload of a `transmitted-data` notification: SDP offer/answer or ICE candidate.
 #[derive(Debug, Clone)]
 pub enum TransmittedData {
     Sdp {
@@ -40,7 +39,7 @@ pub enum TransmittedData {
     },
 }
 
-/// A categorised ws2 notification.
+/// categorised ws2 notification.
 #[derive(Debug, Clone)]
 pub enum CallEvent {
     Connection(ConnectionInfo),
@@ -76,7 +75,6 @@ impl CallEvent {
     }
 }
 
-/// Parse a `connection` notification.
 pub fn parse_connection(value: &Value) -> ConnectionInfo {
     let conversation = value.get("conversation");
     ConnectionInfo {
@@ -97,7 +95,7 @@ pub fn parse_connection(value: &Value) -> ConnectionInfo {
     }
 }
 
-/// Parse a `transmitted-data` notification into an SDP or candidate.
+/// `transmitted-data` notification, either an SDP or a candidate.
 pub fn parse_transmitted_data(value: &Value) -> Option<TransmittedData> {
     let data = value.get("data")?;
     if let Some(sdp) = data.get("sdp") {
