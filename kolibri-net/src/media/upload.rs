@@ -223,6 +223,8 @@ pub async fn upload_file_path(
     url: &str,
     path: &str,
     filename: &str,
+    content_type: Option<&str>,
+    connection: Option<&str>,
     insecure: bool,
     proxy: Option<&ProxyConfig>,
     progress: Option<ProgressFn>,
@@ -235,13 +237,15 @@ pub async fn upload_file_path(
         ("Host", parsed.host.clone()),
         (
             "Content-Type",
-            "application/x-binary; charset=x-user-defined".to_string(),
+            content_type
+                .unwrap_or("application/x-binary; charset=x-user-defined")
+                .to_string(),
         ),
         (
             "Content-Disposition",
             format!("attachment; filename={filename}"),
         ),
-        ("Connection", "keep-alive".to_string()),
+        ("Connection", connection.unwrap_or("keep-alive").to_string()),
         ("User-Agent", percent_encode(user_agent)),
         (
             "Content-Range",
@@ -420,7 +424,7 @@ pub async fn upload_video_path(
     for handle in handles {
         match handle.await {
             Ok(Ok(())) => {}
-            Ok(Err(_)) => return Ok(false),
+            Ok(Err(e)) => return Err(e),
             Err(_) => return Ok(false),
         }
     }

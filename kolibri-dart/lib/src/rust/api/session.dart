@@ -84,6 +84,8 @@ abstract class KolibriSession implements RustOpaqueInterface {
       {required String url,
       required String path,
       required String filename,
+      String? contentType,
+      String? connection,
       String? userAgent});
 
   /// photo upload, multipart/form-data. photoToken comes back in the Done body.
@@ -114,6 +116,12 @@ abstract class KolibriSession implements RustOpaqueInterface {
       required String path,
       required int chunkSize,
       required int concurrency});
+
+  /// HTTP User-Agent derived from the handshake device (opcode 6):
+  /// `OKMessages/{appVersion} ({osVersion}; {deviceName}; {screen})`. Same
+  /// string media uploads use; suitable for webviews that should look like
+  /// the native app.
+  String userAgent();
 }
 
 /// sessionInit handshake result. `payload` is raw msgpack, `payload_json` the

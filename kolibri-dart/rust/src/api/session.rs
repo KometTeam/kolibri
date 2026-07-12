@@ -406,11 +406,14 @@ impl KolibriSession {
 
     /// like [`Self::upload_file`], but streams the body off disk from `path`
     /// (never loads the whole file into memory).
+    #[allow(clippy::too_many_arguments)]
     pub fn upload_file_path(
         &self,
         url: String,
         path: String,
         filename: String,
+        content_type: Option<String>,
+        connection: Option<String>,
         user_agent: Option<String>,
         sink: StreamSink<UploadEvent>,
     ) {
@@ -422,6 +425,8 @@ impl KolibriSession {
                     &url,
                     &path,
                     &filename,
+                    content_type.as_deref(),
+                    connection.as_deref(),
                     false,
                     proxy.as_ref(),
                     Some(progress),
@@ -511,6 +516,15 @@ impl KolibriSession {
                 }
             }
         });
+    }
+
+    /// HTTP User-Agent derived from the handshake device (opcode 6):
+    /// `OKMessages/{appVersion} ({osVersion}; {deviceName}; {screen})`. Same
+    /// string media uploads use; suitable for webviews that should look like
+    /// the native app.
+    #[frb(sync)]
+    pub fn user_agent(&self) -> String {
+        self.inner.http_user_agent()
     }
 
     #[frb(sync)]

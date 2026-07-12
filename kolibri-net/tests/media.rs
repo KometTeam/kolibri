@@ -111,6 +111,8 @@ async fn upload_file_path_streams_body_off_disk() {
         &url,
         path.to_str().unwrap(),
         "clip.bin",
+        None,
+        None,
         false,
         None,
         None,
