@@ -42,7 +42,7 @@ live in the core, so every binding gets them for free.
 - **Proxy** — HTTP CONNECT and SOCKS5 (with auth) for the main socket, media
   uploads, and ws2 calls.
 - **Минцифры CA** — bundled Russian Trusted Root/Sub CA behind a flag, to reach
-  hosts under that CA (`api2.oneme.ru` etc.) without installing it into the OS.
+  `api2.oneme.ru` (the only such host so far) without installing it into the OS.
 
 ## Quick start
 
@@ -136,16 +136,18 @@ In Rust — `ClientConfig::new(host, port).proxy(Some(ProxyConfig::parse(url)?))
 
 ## Минцифры CA
 
-Some Max hosts (e.g. `api2.oneme.ru`, plus CDN and ws2) serve certificates under
-the **Russian Trusted Root/Sub CA (Минцифры)**, which isn't in the Mozilla bundle.
-Without it TLS fails with `UnknownIssuer` unless the user installs the root into
-the OS trust store.
+So far this is only needed for **`api2.oneme.ru`**: it serves a certificate under
+the **Russian Trusted Root/Sub CA (Минцифры)**, which isn't in the Mozilla bundle,
+so TLS fails with `UnknownIssuer` unless the user installs the root into the OS.
+The other hosts (the main `api.oneme.ru`, CDN, ws2) are still on ordinary public
+certs. The flag still covers all three TLS paths, so nothing changes in the code
+if Max moves more of them over.
 
 kolibri ships that root inside the binary and enables it **behind a flag** (off by
 default — not needed outside RU, and trusting a national CA should be explicit).
 The store is additive: normal hosts still verify against Mozilla, Минцифры-signed
-ones against the added root. The flag is process-wide and covers all three TLS
-paths at once (socket, media CDN, ws2 calls) — set it once at startup, before any
+ones against the added root. The three TLS paths are the main socket, media CDN and
+ws2 calls; the flag is process-wide — set it once at startup, before any
 session/upload/call.
 
 ```python

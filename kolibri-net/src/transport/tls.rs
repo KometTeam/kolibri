@@ -138,7 +138,11 @@ mod tests {
         set_trust_mincifry_ca(true);
         assert!(trust_mincifry_ca());
         let with_ca = root_store().unwrap().roots.len();
-        assert_eq!(with_ca, base + 2, "Минцифры anchors added on top of Mozilla");
+        assert_eq!(
+            with_ca,
+            base + 2,
+            "Минцифры anchors added on top of Mozilla"
+        );
 
         assert!(build_client_config(false).is_ok());
         assert!(build_client_config(true).is_ok());

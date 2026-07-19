@@ -529,7 +529,13 @@ impl AsyncSession {
         let proxy = self.proxy.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let resp = kolibri_net::media::upload_file(
-                &url, &data, &filename, false, proxy.as_ref(), progress, &ua,
+                &url,
+                &data,
+                &filename,
+                false,
+                proxy.as_ref(),
+                progress,
+                &ua,
             )
             .await
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -555,7 +561,13 @@ impl AsyncSession {
         let proxy = self.proxy.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let resp = kolibri_net::media::upload_photo(
-                &url, &data, &filename, false, proxy.as_ref(), progress, &ua,
+                &url,
+                &data,
+                &filename,
+                false,
+                proxy.as_ref(),
+                progress,
+                &ua,
             )
             .await
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -579,7 +591,13 @@ impl AsyncSession {
         let proxy = self.proxy.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             kolibri_net::media::upload_video(
-                &url, data, chunk_size, concurrency, false, proxy, progress,
+                &url,
+                data,
+                chunk_size,
+                concurrency,
+                false,
+                proxy,
+                progress,
             )
             .await
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))
@@ -1225,9 +1243,10 @@ impl AsyncCallSignaling {
     ) -> PyResult<Bound<'py, PyAny>> {
         let extra = py_to_json(extra)?;
         let command = command.to_string();
-        self.call(py, move |s| async move {
-            s.send_command(&command, extra).await
-        })
+        self.call(
+            py,
+            move |s| async move { s.send_command(&command, extra).await },
+        )
     }
 
     /// await the next ws2 notification as a dict, None on timeout
@@ -1269,7 +1288,9 @@ impl AsyncCallSignaling {
     fn call<'py, F, Fut>(&self, py: Python<'py>, f: F) -> PyResult<Bound<'py, PyAny>>
     where
         F: FnOnce(Arc<kolibri_net::calls::Ws2Signaling>) -> Fut + Send + 'static,
-        Fut: Future<Output = Result<serde_json::Value, kolibri_net::calls::CallError>> + Send + 'static,
+        Fut: Future<Output = Result<serde_json::Value, kolibri_net::calls::CallError>>
+            + Send
+            + 'static,
     {
         let inner = self.inner.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {

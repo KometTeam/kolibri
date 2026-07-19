@@ -10,6 +10,6 @@ mod wiretap;
 
 pub use client::{Client, ClientConfig};
 pub use error::TransportError;
-pub use tls::{set_trust_mincifry_ca, trust_mincifry_ca};
 pub use proxy::{ProxyConfig, ProxyKind};
+pub use tls::{set_trust_mincifry_ca, trust_mincifry_ca};
 pub use wiretap::{Direction, WireTap};
