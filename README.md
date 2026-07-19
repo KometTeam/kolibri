@@ -42,6 +42,8 @@ LZ4/Zstd, полная машина сессии (handshake, keepalive, реко
   типизированный разбор входящих нотификаций. Сам WebRTC-медиастек — на хосте.
 - **Прокси** — HTTP CONNECT и SOCKS5 (с авторизацией) для основного сокета,
   загрузки медиа и ws2-звонков.
+- **Серт Минцифры** — зашитый корень Russian Trusted Root/Sub CA под флагом, чтобы
+  ходить на хосты под этим CA (`api2.oneme.ru` и др.) без установки серта в систему.
 
 ## Быстрый старт
 
@@ -151,6 +153,34 @@ s = kolibri.Session("api.oneme.ru", proxy="socks5://127.0.0.1:1080")
 final s = openSession(host: 'api.oneme.ru', proxy: 'socks5://user:pass@127.0.0.1:1080');
 ```
 В Rust — `ClientConfig::new(host, port).proxy(Some(ProxyConfig::parse(url)?))`.
+
+## Сертификат Минцифры
+
+Часть хостов Макса (например `api2.oneme.ru`, а также CDN и ws2) отдают серты под
+корнем **Russian Trusted Root/Sub CA (Минцифры)**, которого нет в бандле Mozilla.
+Без него TLS падает с `UnknownIssuer`, если пользователь не поставил корень в
+систему.
+
+kolibri несёт этот корень внутри бинаря и включает его **по флагу** (по умолчанию
+выключен — вне РФ не нужен, доверие к национальному CA должно быть явным). Стор
+аддитивный: обычные хосты по-прежнему проверяются по Mozilla, хосты под Минцифрой
+— по добавленному корню. Флаг процессный и покрывает все три пути TLS сразу
+(сокет, медиа-CDN, ws2-звонки) — ставь один раз на старте, до сессий/загрузок/звонков.
+
+```python
+kolibri.set_trust_mincifry_ca(True)   # до создания Session
+s = kolibri.Session("api2.oneme.ru", 443)
+s.connect()
+```
+```rust
+kolibri_net::set_trust_mincifry_ca(true);
+```
+
+Граница доверия — только исходящие TLS-соединения самого kolibri: системный trust
+store ОС не трогается, другие библиотеки в процессе (свой `requests`/OpenSSL и т.п.)
+этот корень не видят. Обёртки: `kolibri.set_trust_mincifry_ca(bool)` (Python),
+`Kolibri.setTrustMincifryCa(bool)` (Kotlin), `kolibri.SetTrustMincifryCA(bool)` (Go),
+`kolibri_set_trust_mincifry_ca(bool)` (C ABI / Swift), `setTrustMincifryCa(bool)` (Dart).
 
 ## Логирование трафика
 

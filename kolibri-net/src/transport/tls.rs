@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
@@ -8,11 +9,42 @@ use tokio_rustls::TlsConnector;
 
 use super::error::TransportError;
 
-/// Verifies against the bundled Mozilla root store; `insecure` accepts any cert
+/// Минцифры Root + Sub CA, the anchors Max endpoints chain to; absent from the
+/// Mozilla bundle. Extracted from the Max app; see the file header.
+const MINCIFRY_CA_PEM: &str = include_str!("mincifry_ca.pem");
+
+/// process-wide opt-in to the bundled Минцифры CA, off by default. set once at
+/// startup; read by every TLS path (socket, media, ws2).
+static TRUST_MINCIFRY: AtomicBool = AtomicBool::new(false);
+
+pub fn set_trust_mincifry_ca(enabled: bool) {
+    TRUST_MINCIFRY.store(enabled, Ordering::Relaxed);
+}
+
+pub fn trust_mincifry_ca() -> bool {
+    TRUST_MINCIFRY.load(Ordering::Relaxed)
+}
+
+/// Mozilla roots, plus the Минцифры CA when the flag is on (additive: rustls
+/// picks the matching anchor per connection).
+fn root_store() -> Result<RootCertStore, TransportError> {
+    let mut roots = RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+    };
+    if trust_mincifry_ca() {
+        for cert in rustls_pemfile::certs(&mut MINCIFRY_CA_PEM.as_bytes()) {
+            let cert = cert.map_err(|e| TransportError::Tls(format!("mincifry CA parse: {e}")))?;
+            roots
+                .add(cert)
+                .map_err(|e| TransportError::Tls(format!("mincifry CA add: {e}")))?;
+        }
+    }
+    Ok(roots)
+}
+
+/// Shared client config for every TLS path. `insecure` accepts any cert
 /// (self-signed / MitM-debug only).
-///
-/// For OS-trust-store parity, swap the root store for `rustls-platform-verifier`.
-pub fn build_connector(insecure: bool) -> Result<TlsConnector, TransportError> {
+pub fn build_client_config(insecure: bool) -> Result<Arc<ClientConfig>, TransportError> {
     let provider = Arc::new(ring::default_provider());
 
     let config = if insecure {
@@ -23,17 +55,20 @@ pub fn build_connector(insecure: bool) -> Result<TlsConnector, TransportError> {
             .with_custom_certificate_verifier(Arc::new(AcceptAnyCert(provider)))
             .with_no_client_auth()
     } else {
-        let roots = RootCertStore {
-            roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
-        };
         ClientConfig::builder_with_provider(provider)
             .with_safe_default_protocol_versions()
             .map_err(|e| TransportError::Tls(e.to_string()))?
-            .with_root_certificates(roots)
+            .with_root_certificates(root_store()?)
             .with_no_client_auth()
     };
 
-    Ok(TlsConnector::from(Arc::new(config)))
+    Ok(Arc::new(config))
+}
+
+/// TLS connector for the main socket and media uploads. For OS-trust-store
+/// parity, swap the root store for `rustls-platform-verifier`.
+pub fn build_connector(insecure: bool) -> Result<TlsConnector, TransportError> {
+    Ok(TlsConnector::from(build_client_config(insecure)?))
 }
 
 /// Accepts every cert. DEBUG ONLY, wide open to MitM.
@@ -82,5 +117,32 @@ impl ServerCertVerifier for AcceptAnyCert {
 
     fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
         self.0.signature_verification_algorithms.supported_schemes()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mincifry_flag_adds_two_anchors() {
+        let bundled = rustls_pemfile::certs(&mut MINCIFRY_CA_PEM.as_bytes())
+            .collect::<Result<Vec<_>, _>>()
+            .expect("bundle parses");
+        assert_eq!(bundled.len(), 2, "root + sub CA");
+
+        set_trust_mincifry_ca(false);
+        let base = root_store().unwrap().roots.len();
+        assert_eq!(base, webpki_roots::TLS_SERVER_ROOTS.len());
+
+        set_trust_mincifry_ca(true);
+        assert!(trust_mincifry_ca());
+        let with_ca = root_store().unwrap().roots.len();
+        assert_eq!(with_ca, base + 2, "Минцифры anchors added on top of Mozilla");
+
+        assert!(build_client_config(false).is_ok());
+        assert!(build_client_config(true).is_ok());
+
+        set_trust_mincifry_ca(false);
     }
 }

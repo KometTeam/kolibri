@@ -25,7 +25,8 @@ pub use protocol::{
 
 #[cfg(feature = "transport")]
 pub use transport::{
-    Client, ClientConfig, Direction, ProxyConfig, ProxyKind, TransportError, WireTap,
+    set_trust_mincifry_ca, trust_mincifry_ca, Client, ClientConfig, Direction, ProxyConfig,
+    ProxyKind, TransportError, WireTap,
 };
 
 #[cfg(feature = "transport")]

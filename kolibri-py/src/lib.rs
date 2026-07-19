@@ -1283,6 +1283,17 @@ impl AsyncCallSignaling {
 
 /// ws2 `connection` notification => {topology, is_sfu, participants, ice_servers},
 /// plus `peer` when my_user_id is given
+/// Trust the bundled Минцифры CA (socket, media, calls); off by default, set at startup.
+#[pyfunction]
+fn set_trust_mincifry_ca(enabled: bool) {
+    kolibri_net::set_trust_mincifry_ca(enabled);
+}
+
+#[pyfunction]
+fn trust_mincifry_ca() -> bool {
+    kolibri_net::trust_mincifry_ca()
+}
+
 #[pyfunction]
 #[pyo3(signature = (notification, my_user_id = None))]
 fn parse_connection(
@@ -1348,6 +1359,8 @@ fn kolibri(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<AsyncCallSignaling>()?;
     m.add_function(wrap_pyfunction!(auth_mode, m)?)?;
     m.add_function(wrap_pyfunction!(decode_vcp, m)?)?;
+    m.add_function(wrap_pyfunction!(set_trust_mincifry_ca, m)?)?;
+    m.add_function(wrap_pyfunction!(trust_mincifry_ca, m)?)?;
     m.add_function(wrap_pyfunction!(parse_connection, m)?)?;
     m.add_function(wrap_pyfunction!(parse_transmitted_data, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

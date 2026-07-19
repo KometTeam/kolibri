@@ -532,6 +532,30 @@ pub extern "system" fn Java_ru_kolibri_Native_sessionSetPingInteractive<'local>(
     }
 }
 
+/// Trust the bundled Минцифры CA (socket, media, calls); off by default, set at startup.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_ru_kolibri_Native_setTrustMincifryCa<'local>(
+    _env: JNIEnv<'local>,
+    _this: JObject<'local>,
+    enabled: jboolean,
+) {
+    kolibri_net::set_trust_mincifry_ca(enabled == JNI_TRUE);
+}
+
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_ru_kolibri_Native_trustMincifryCa<'local>(
+    _env: JNIEnv<'local>,
+    _this: JObject<'local>,
+) -> jboolean {
+    if kolibri_net::trust_mincifry_ca() {
+        JNI_TRUE
+    } else {
+        JNI_FALSE
+    }
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ru_kolibri_Native_sessionUserAgent<'local>(

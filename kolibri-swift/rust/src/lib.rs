@@ -112,6 +112,17 @@ pub extern "C" fn kolibri_string_free(s: *mut c_char) {
     }
 }
 
+/// Trust the bundled Минцифры CA (socket, media, calls); off by default, set at startup.
+#[no_mangle]
+pub extern "C" fn kolibri_set_trust_mincifry_ca(enabled: bool) {
+    kolibri_net::set_trust_mincifry_ca(enabled);
+}
+
+#[no_mangle]
+pub extern "C" fn kolibri_trust_mincifry_ca() -> bool {
+    kolibri_net::trust_mincifry_ca()
+}
+
 #[no_mangle]
 pub extern "C" fn kolibri_session_new(
     cfg: *const KConfig,

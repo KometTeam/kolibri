@@ -352,6 +352,15 @@ func pushTimeout(timeout time.Duration) C.int64_t {
 // State returns the current session state (Disconnected/Connecting/Connected/Online).
 func (s *Session) State() int { return int(C.kolibri_session_state(s.ptr)) }
 
+// SetTrustMincifryCA trusts the bundled Минцифры CA (Russian Trusted Root + Sub
+// CA) on every TLS path (main socket, media uploads, ws2 calls), so hosts like
+// api2.oneme.ru verify without installing the CA into the OS trust store. Off by
+// default; call once at startup before opening sessions/uploads/calls.
+func SetTrustMincifryCA(enabled bool) { C.kolibri_set_trust_mincifry_ca(C.bool(enabled)) }
+
+// TrustMincifryCA reports whether the bundled Минцифры CA is currently trusted.
+func TrustMincifryCA() bool { return bool(C.kolibri_trust_mincifry_ca()) }
+
 // PingInteractive reports the current keepalive interactive flag.
 func (s *Session) PingInteractive() bool { return bool(C.kolibri_session_ping_interactive(s.ptr)) }
 

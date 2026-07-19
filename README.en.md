@@ -41,6 +41,8 @@ live in the core, so every binding gets them for free.
   of incoming notifications. The WebRTC media stack itself stays in the host.
 - **Proxy** — HTTP CONNECT and SOCKS5 (with auth) for the main socket, media
   uploads, and ws2 calls.
+- **Минцифры CA** — bundled Russian Trusted Root/Sub CA behind a flag, to reach
+  hosts under that CA (`api2.oneme.ru` etc.) without installing it into the OS.
 
 ## Quick start
 
@@ -131,6 +133,35 @@ s = kolibri.Session("api.oneme.ru", proxy="socks5://127.0.0.1:1080")
 final s = openSession(host: 'api.oneme.ru', proxy: 'socks5://user:pass@127.0.0.1:1080');
 ```
 In Rust — `ClientConfig::new(host, port).proxy(Some(ProxyConfig::parse(url)?))`.
+
+## Минцифры CA
+
+Some Max hosts (e.g. `api2.oneme.ru`, plus CDN and ws2) serve certificates under
+the **Russian Trusted Root/Sub CA (Минцифры)**, which isn't in the Mozilla bundle.
+Without it TLS fails with `UnknownIssuer` unless the user installs the root into
+the OS trust store.
+
+kolibri ships that root inside the binary and enables it **behind a flag** (off by
+default — not needed outside RU, and trusting a national CA should be explicit).
+The store is additive: normal hosts still verify against Mozilla, Минцифры-signed
+ones against the added root. The flag is process-wide and covers all three TLS
+paths at once (socket, media CDN, ws2 calls) — set it once at startup, before any
+session/upload/call.
+
+```python
+kolibri.set_trust_mincifry_ca(True)   # before creating a Session
+s = kolibri.Session("api2.oneme.ru", 443)
+s.connect()
+```
+```rust
+kolibri_net::set_trust_mincifry_ca(true);
+```
+
+Trust boundary is kolibri's own outgoing TLS only: the OS trust store is left
+untouched, and other libraries in the process (their own `requests`/OpenSSL, etc.)
+don't see this root. Wrappers: `kolibri.set_trust_mincifry_ca(bool)` (Python),
+`Kolibri.setTrustMincifryCa(bool)` (Kotlin), `kolibri.SetTrustMincifryCA(bool)` (Go),
+`kolibri_set_trust_mincifry_ca(bool)` (C ABI / Swift), `setTrustMincifryCa(bool)` (Dart).
 
 ## Traffic logging
 

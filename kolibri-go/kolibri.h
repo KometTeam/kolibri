@@ -53,6 +53,10 @@ typedef void (*KWireCb)(void *user, const char *direction, const char *cmd,
 void kolibri_bytes_free(KBytes b);
 void kolibri_string_free(char *s);
 
+/* Trust the bundled Минцифры CA (socket, media, calls); off by default, set at startup. */
+void kolibri_set_trust_mincifry_ca(bool enabled);
+bool kolibri_trust_mincifry_ca(void);
+
 char *kolibri_session_new(const KConfig *cfg, KWireCb wire_cb, void *wire_user,
                           KSession **out);
 char *kolibri_session_connect(KSession *h, KBytes *out);

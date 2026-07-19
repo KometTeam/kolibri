@@ -55,6 +55,9 @@ internal object Native {
     external fun sessionSend(handle: Long, opcode: Int, payload: ByteArray): Int
     external fun sessionNextPush(handle: Long, timeoutMs: Long, outOpcode: IntArray): ByteArray?
     external fun sessionNextPushJson(handle: Long, timeoutMs: Long, outOpcode: IntArray): String?
+    external fun setTrustMincifryCa(enabled: Boolean)
+    external fun trustMincifryCa(): Boolean
+
     external fun sessionState(handle: Long): Int
     external fun sessionPingInteractive(handle: Long): Boolean
     external fun sessionSetPingInteractive(handle: Long, interactive: Boolean)

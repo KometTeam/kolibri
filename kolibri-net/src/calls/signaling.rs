@@ -11,8 +11,11 @@ use tokio_tungstenite::client_async_tls_with_config;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 
+use tokio_tungstenite::Connector;
+
 use super::CallError;
 use crate::transport::proxy::{connect_tcp, ProxyConfig};
+use crate::transport::tls::build_client_config;
 
 const NOTIF_CAPACITY: usize = 256;
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -74,24 +77,19 @@ impl Ws2Signaling {
                 .map_err(|_| CallError::Ws("invalid user agent".into()))?,
         );
 
-        let ws = match proxy {
-            None => {
-                tokio_tungstenite::connect_async(request)
-                    .await
-                    .map_err(|e| CallError::Ws(e.to_string()))?
-                    .0
-            }
-            Some(p) => {
-                let (host, port) = ws_host_port(url)?;
-                let tcp = connect_tcp(&host, port, DEFAULT_TIMEOUT, Some(p))
-                    .await
-                    .map_err(|e| CallError::Ws(e.to_string()))?;
-                client_async_tls_with_config(request, tcp, None, None)
-                    .await
-                    .map_err(|e| CallError::Ws(e.to_string()))?
-                    .0
-            }
-        };
+        // own the TLS (both branches) so the Минцифры-CA flag reaches ws2;
+        // tungstenite's built-in connector only knows the Mozilla roots.
+        let (host, port) = ws_host_port(url)?;
+        let tcp = connect_tcp(&host, port, DEFAULT_TIMEOUT, proxy)
+            .await
+            .map_err(|e| CallError::Ws(e.to_string()))?;
+        let connector = Connector::Rustls(
+            build_client_config(false).map_err(|e| CallError::Ws(e.to_string()))?,
+        );
+        let ws = client_async_tls_with_config(request, tcp, None, Some(connector))
+            .await
+            .map_err(|e| CallError::Ws(e.to_string()))?
+            .0;
         let (mut write, mut read) = ws.split();
 
         let (write_tx, mut write_rx) = mpsc::unbounded_channel::<String>();
