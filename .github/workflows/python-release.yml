@@ -16,6 +16,7 @@ jobs:
   linux:
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64, aarch64]
     steps:
@@ -30,7 +31,8 @@ jobs:
           target: ${{ matrix.target }}
           args: --release --out dist
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
-          manylinux: auto
+          # ring's asm needs a newer GCC than the manylinux2014 (auto) image ships
+          manylinux: 2_28
       - name: Upload wheels
         uses: actions/upload-artifact@v6
         with:
@@ -40,6 +42,7 @@ jobs:
   musllinux:
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64, aarch64]
     steps:
