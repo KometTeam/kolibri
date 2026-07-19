@@ -1,19 +1,21 @@
 //! MessagePack -> JSON, for logs. lossy: Binary/Ext turn into base64 strings,
-//! non-string map keys get stringified (JSON holds neither) — so it reads but
-//! won't round-trip back to the same msgpack.
+//! non-string map keys get stringified (JSON holds neither), so it reads but
+//! won't round-trip back to the same msgpack. The request direction
+//! ([`json_to_value`]) recovers what hosts tag explicitly: `{"$bin":…}`,
+//! `{"$ext":…}` and `"$int:<n>"` map keys.
 
 use base64::Engine;
 use rmpv::Value;
 use serde_json::{Map, Number, Value as Json};
 
 /// a decoded MessagePack value as JSON. `Binary` -> plain base64 string
-/// (readable, but a request can't recover it — see [`value_to_json_tagged`]).
+/// (readable, but a request can't recover it, see [`value_to_json_tagged`]).
 pub fn value_to_json(value: &Value) -> Json {
     to_json(value, false)
 }
 
 /// like [`value_to_json`], but `Binary` -> `{"$bin":"<base64>"}`, which
-/// [`json_to_value`] turns back — round-trips on the data plane.
+/// [`json_to_value`] turns back; round-trips on the data plane.
 pub fn value_to_json_tagged(value: &Value) -> Json {
     to_json(value, true)
 }
@@ -54,8 +56,8 @@ fn to_json(value: &Value, tag_binary: bool) -> Json {
 
 /// JSON to MessagePack, to build a request from a host map. Inverse of
 /// [`value_to_json`] where it can be: `{"$bin":"<b64>"}` -> `Binary`,
-/// `{"$ext": tag, "data": "<b64>"}` -> `Ext`; other keys stay text (JSON has no
-/// non-string keys).
+/// `{"$ext": tag, "data": "<b64>"}` -> `Ext`, a `"$int:<n>"` key -> integer
+/// map key (JSON has no non-string keys); other keys stay text.
 pub fn json_to_value(value: &Json) -> Value {
     match value {
         Json::Null => Value::Nil,
@@ -69,11 +71,23 @@ pub fn json_to_value(value: &Json) -> Value {
             }
             Value::Map(
                 obj.iter()
-                    .map(|(k, v)| (Value::from(k.clone()), json_to_value(v)))
+                    .map(|(k, v)| (json_key_to_value(k), json_to_value(v)))
                     .collect(),
             )
         }
     }
+}
+
+fn json_key_to_value(key: &str) -> Value {
+    if let Some(num) = key.strip_prefix("$int:") {
+        if let Ok(i) = num.parse::<i64>() {
+            return Value::from(i);
+        }
+        if let Ok(u) = num.parse::<u64>() {
+            return Value::from(u);
+        }
+    }
+    Value::from(key.to_string())
 }
 
 fn number_to_value(n: &Number) -> Value {
@@ -208,5 +222,31 @@ mod tests {
         assert_eq!(get("ok").unwrap().as_bool(), Some(true));
         assert_eq!(get("fp").unwrap().as_slice(), Some(&[0xDE, 0xAD][..]));
         assert_eq!(get("list").unwrap().as_array().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn tagged_int_keys_become_integer_map_keys() {
+        use super::json_to_value;
+        let json = serde_json::json!({
+            "settings": {
+                "chats": {
+                    "$int:12345": { "dontDisturbUntil": -1 },
+                    "$int:-7": { "dontDisturbUntil": 0 },
+                    "$int:18446744073709551615": true,
+                    "$int:oops": true,
+                    "plain": true,
+                },
+            },
+        });
+        let value = json_to_value(&json);
+        let settings = value.as_map().unwrap()[0].1.as_map().unwrap();
+        let chats = settings[0].1.as_map().unwrap();
+        let has = |want: &Value| chats.iter().any(|(k, _)| k == want);
+        assert!(has(&Value::from(12345i64)));
+        assert!(has(&Value::from(-7i64)));
+        assert!(has(&Value::from(u64::MAX)));
+        assert!(has(&Value::from("$int:oops")));
+        assert!(has(&Value::from("plain")));
+        assert_eq!(chats.len(), 5);
     }
 }

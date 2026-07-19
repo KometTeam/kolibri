@@ -202,7 +202,8 @@ KolibriSession openSession({
 }
 
 /// Build a request from a Dart `Map`; the core does the msgpack. A `Uint8List`
-/// value is sent as a binary field.
+/// value is sent as a binary field; an `int` map key is sent as an integer key
+/// (JSON can't hold either, so both travel tagged and the core untags them).
 extension KolibriRequestMap on KolibriSession {
   Future<Map<String, dynamic>> requestMap(
     int opcode,
@@ -257,7 +258,7 @@ extension KolibriRequestMapFull on KolibriSession {
   }
 }
 
-/// The handshake payload decoded as a map (no msgpack package needed).
+/// Handshake payload decoded as a map.
 extension KolibriHandshakeMap on HandshakeInfo {
   Map<String, dynamic> get payloadMap => _asMap(payloadJson);
 }
@@ -297,7 +298,9 @@ dynamic _escapeBinary(dynamic value) {
     return {r'$bin': base64.encode(value)};
   }
   if (value is Map) {
-    return value.map((k, v) => MapEntry(k, _escapeBinary(v)));
+    return value.map(
+      (k, v) => MapEntry(k is int ? '\$int:$k' : k, _escapeBinary(v)),
+    );
   }
   if (value is List) {
     return value.map(_escapeBinary).toList();
