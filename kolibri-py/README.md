@@ -1,9 +1,9 @@
 # kolibri (Python)
 
 Python bindings for [`kolibri-net`](../kolibri-net) — the Komet messaging protocol
-in Rust. A synchronous `Session` that owns a tokio runtime internally;
-MessagePack payloads are exposed as native Python dicts/lists, so you never touch
-bytes.
+in Rust. A synchronous `Session` that owns a tokio runtime internally, plus an
+`AsyncSession` that plugs into your `asyncio` event loop. MessagePack payloads are
+exposed as native Python dicts/lists, so you never touch bytes.
 
 ## Build & install
 
@@ -35,12 +35,49 @@ push = s.next_push(timeout_secs=5)          # {"opcode": ..., "payload": ...} or
 s.disconnect()
 ```
 
+### Async (`asyncio`)
+
+`AsyncSession` mirrors `Session` method-for-method, but every network call returns
+an awaitable driven on a process-wide tokio runtime — so it must be used from
+inside a running event loop. The non-blocking accessors (`send`, `state`,
+`ping_interactive`, `set_ping_interactive`, `disconnect`) stay plain sync methods.
+
+```python
+import asyncio
+import kolibri
+
+async def main():
+    s = kolibri.AsyncSession("api.oneme.ru", 443)
+    info = await s.connect()
+    resp = await s.request(opcode, {"key": "value"})
+    push = await s.next_push(timeout_secs=5)     # dict, or None on timeout
+    s.disconnect()
+
+asyncio.run(main())
+```
+
+Call signaling has the same split: `kolibri.AsyncCallSignaling.connect(url)` is an
+async staticmethod (`sig = await kolibri.AsyncCallSignaling.connect(url)`), and its
+methods (`accept_call`, `hangup`, `transmit_sdp`, `next_notification`, …) are all
+awaitable. See `examples/minimal_async.py`.
+
 ### Phone auth
 
 ```bash
 python examples/auth.py +7XXXXXXXXXX        # sends a real SMS, then verifies the code
 python examples/handshake.py                # no SMS, just proves the stack
 ```
+
+Every example has an `_async.py` twin built on `AsyncSession` — same flow, `asyncio`:
+
+```bash
+python examples/handshake_async.py          # no SMS
+python examples/auth_async.py +7XXXXXXXXXX   # real SMS
+python examples/call_bot_async.py            # answering call bot (aiortc media)
+```
+
+`call_bot_async.py` is the clearest win: the sync `call_bot.py` wraps every
+network call in `asyncio.to_thread(...)`; the async twin just `await`s them.
 
 `kolibri.auth_mode(calls_seed, device_id)` computes the 96-byte anti-spoof `mode`
 fingerprint for the authRequest payload.
@@ -56,4 +93,5 @@ fingerprint for the authRequest payload.
 | `.next_push(timeout_secs=None) -> dict \| None` | Wait for the next server push. |
 | `.state() -> str` | `"disconnected"` / `"connecting"` / `"connected"` / `"online"`. |
 | `.disconnect()` | Stop the session and disable auto-reconnect. |
+| `AsyncSession(host, port=443, **device_kwargs)` | Same as `Session`, but `connect`/`request`/`request_json`/`upload_*`/`next_push` are awaitables. |
 | `kolibri.auth_mode(calls_seed, device_id) -> bytes` | Anti-spoof handshake fingerprint. |

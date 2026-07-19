@@ -1,6 +1,9 @@
-//! python bindings for kolibri-net. blocking Session owns its own tokio runtime;
-//! msgpack payloads convert to/from native python dicts/lists.
+//! python bindings for kolibri-net. the blocking `Session` owns its own tokio
+//! runtime; `AsyncSession` bridges into the running asyncio loop via
+//! pyo3-async-runtimes and shares one process-wide runtime. msgpack payloads
+//! convert to/from native python dicts/lists.
 
+use std::future::Future;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -15,7 +18,7 @@ use rmpv::Value;
 use tokio::runtime::Runtime;
 use tokio::sync::broadcast;
 
-/// each method blocks the caller, driving the tokio runtime to completion
+/// each method blocks, driving the tokio runtime to completion
 #[pyclass]
 struct Session {
     rt: Arc<Runtime>,
@@ -190,8 +193,7 @@ impl Session {
         self.inner.ping_interactive()
     }
 
-    /// flip `interactive` on a live session; one ping goes out now so the server
-    /// hears it right away
+    /// flip `interactive` on a live session; one ping goes out now
     fn set_ping_interactive(&self, interactive: bool) {
         self.inner.set_ping_interactive(interactive);
     }
@@ -319,6 +321,300 @@ impl Session {
             }
             None => Ok(None),
         }
+    }
+
+    /// "disconnected" | "connecting" | "connected" | "online"
+    fn state(&self) -> &'static str {
+        match self.inner.state() {
+            SessionState::Disconnected => "disconnected",
+            SessionState::Connecting => "connecting",
+            SessionState::Connected => "connected",
+            SessionState::Online => "online",
+        }
+    }
+
+    /// stops the session and disables auto-reconnect
+    fn disconnect(&self) {
+        self.inner.disconnect();
+    }
+}
+
+/// asyncio-native counterpart of [`Session`]. every network method returns an
+/// awaitable driven on the pyo3-async-runtimes process-wide tokio runtime, so it
+/// must be called from within a running event loop. non-blocking accessors
+/// (`send`, `state`, ...) stay plain sync methods.
+#[pyclass]
+struct AsyncSession {
+    inner: Arc<NetSession>,
+    push_rx: Arc<tokio::sync::Mutex<broadcast::Receiver<Packet>>>,
+    proxy: Option<ProxyConfig>,
+}
+
+#[pymethods]
+impl AsyncSession {
+    #[new]
+    #[pyo3(signature = (
+        host,
+        port = 443,
+        device_id = "kolibri-rs-device",
+        instance_id = "kolibri-rs-instance",
+        app_version = "26.20.2",
+        build_number = 6758,
+        device_type = "ANDROID",
+        os_version = "Android 14",
+        timezone = "Europe/Moscow",
+        screen = "420dpi 420dpi 1080x2340",
+        push_device_type = "GCM",
+        arch = "arm64-v8a",
+        locale = "ru",
+        device_name = "Rust",
+        device_locale = "ru",
+        client_session_id = 1_700_000_000i64,
+        ping_interval_secs = 30u64,
+        ping_interactive = true,
+        auto_reconnect = true,
+        insecure_tls = false,
+        proxy = None,
+        on_wire = None
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        host: &str,
+        port: u16,
+        device_id: &str,
+        instance_id: &str,
+        app_version: &str,
+        build_number: i64,
+        device_type: &str,
+        os_version: &str,
+        timezone: &str,
+        screen: &str,
+        push_device_type: &str,
+        arch: &str,
+        locale: &str,
+        device_name: &str,
+        device_locale: &str,
+        client_session_id: i64,
+        ping_interval_secs: u64,
+        ping_interactive: bool,
+        auto_reconnect: bool,
+        insecure_tls: bool,
+        proxy: Option<String>,
+        on_wire: Option<PyObject>,
+    ) -> PyResult<Self> {
+        let user_agent = UserAgent {
+            device_type: device_type.to_string(),
+            app_version: app_version.to_string(),
+            os_version: os_version.to_string(),
+            timezone: timezone.to_string(),
+            screen: screen.to_string(),
+            push_device_type: push_device_type.to_string(),
+            arch: arch.to_string(),
+            locale: locale.to_string(),
+            build_number,
+            device_name: device_name.to_string(),
+            device_locale: device_locale.to_string(),
+        };
+        let handshake = HandshakeConfig {
+            instance_id: instance_id.to_string(),
+            device_id: device_id.to_string(),
+            client_session_id,
+            user_agent,
+        };
+        let proxy = match proxy {
+            Some(url) => Some(ProxyConfig::parse(&url).map_err(PyValueError::new_err)?),
+            None => None,
+        };
+        let mut client = ClientConfig::new(host, port);
+        client.insecure_tls = insecure_tls;
+        client.proxy = proxy.clone();
+        let mut config = SessionConfig::new(client, handshake);
+        config.ping_interval = Duration::from_secs(ping_interval_secs);
+        config.ping_interactive = ping_interactive;
+        config.auto_reconnect = auto_reconnect;
+
+        let tap = on_wire.map(wire_tap_from_callable);
+        let inner = Arc::new(NetSession::with_wire_tap(config, tap));
+        let push_rx = Arc::new(tokio::sync::Mutex::new(inner.subscribe()));
+
+        Ok(Self {
+            inner,
+            push_rx,
+            proxy,
+        })
+    }
+
+    /// await connect + sessionInit handshake => {calls_seed, device_name, payload}
+    fn connect<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let inner = self.inner.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let info = inner.connect().await.map_err(to_pyerr)?;
+            Python::with_gil(|py| {
+                let dict = PyDict::new(py);
+                dict.set_item("calls_seed", info.calls_seed)?;
+                dict.set_item("device_name", info.device_name)?;
+                dict.set_item("payload", value_to_py(py, &info.payload)?)?;
+                Ok(dict.into_any().unbind())
+            })
+        })
+    }
+
+    /// await a decoded response; raises on server error packet or timeout
+    fn request<'py>(
+        &self,
+        py: Python<'py>,
+        opcode: u16,
+        payload: &Bound<'_, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let bytes = encode_value(&py_to_value(payload)?);
+        let inner = self.inner.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let packet = inner.request(opcode, &bytes).await.map_err(to_pyerr)?;
+            let value = packet
+                .value()
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            Python::with_gil(|py| Ok(value_to_py(py, &value)?.unbind()))
+        })
+    }
+
+    /// like `request`, but resolves to the response as a JSON string
+    fn request_json<'py>(
+        &self,
+        py: Python<'py>,
+        opcode: u16,
+        payload: &Bound<'_, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let bytes = encode_value(&py_to_value(payload)?);
+        let inner = self.inner.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let packet = inner.request(opcode, &bytes).await.map_err(to_pyerr)?;
+            let json = packet
+                .json()
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            Ok(json.to_string())
+        })
+    }
+
+    /// fire-and-forget; returns the seq number (non-blocking, no await)
+    fn send(&self, opcode: u16, payload: &Bound<'_, PyAny>) -> PyResult<u16> {
+        let bytes = encode_value(&py_to_value(payload)?);
+        self.inner.send(opcode, &bytes).map_err(to_pyerr)
+    }
+
+    /// keepalive `interactive` flag (foreground/background hint)
+    fn ping_interactive(&self) -> bool {
+        self.inner.ping_interactive()
+    }
+
+    /// flip `interactive` on a live session; one ping goes out now
+    fn set_ping_interactive(&self, interactive: bool) {
+        self.inner.set_ping_interactive(interactive);
+    }
+
+    /// generic file upload to a CDN url. progress cb, if given, gets (sent, total).
+    #[pyo3(signature = (url, data, filename, progress = None, user_agent = None))]
+    fn upload_file<'py>(
+        &self,
+        py: Python<'py>,
+        url: &str,
+        data: Vec<u8>,
+        filename: &str,
+        progress: Option<PyObject>,
+        user_agent: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let url = url.to_string();
+        let filename = filename.to_string();
+        let progress = py_progress(progress);
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let resp = kolibri_net::media::upload_file(
+                &url, &data, &filename, false, proxy.as_ref(), progress, &ua,
+            )
+            .await
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            Python::with_gil(|py| media_response(py, resp))
+        })
+    }
+
+    /// photo upload, multipart/form-data. photoToken comes back in the JSON body.
+    #[pyo3(signature = (url, data, filename, progress = None, user_agent = None))]
+    fn upload_photo<'py>(
+        &self,
+        py: Python<'py>,
+        url: &str,
+        data: Vec<u8>,
+        filename: &str,
+        progress: Option<PyObject>,
+        user_agent: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let url = url.to_string();
+        let filename = filename.to_string();
+        let progress = py_progress(progress);
+        let ua = user_agent.unwrap_or_else(|| self.inner.http_user_agent());
+        let proxy = self.proxy.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let resp = kolibri_net::media::upload_photo(
+                &url, &data, &filename, false, proxy.as_ref(), progress, &ua,
+            )
+            .await
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            Python::with_gil(|py| media_response(py, resp))
+        })
+    }
+
+    /// video upload, parallel resumable chunks. progress gets (sent, total).
+    #[pyo3(signature = (url, data, chunk_size = 2 * 1024 * 1024, concurrency = 4, progress = None))]
+    fn upload_video<'py>(
+        &self,
+        py: Python<'py>,
+        url: &str,
+        data: Vec<u8>,
+        chunk_size: usize,
+        concurrency: usize,
+        progress: Option<PyObject>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let url = url.to_string();
+        let progress = py_progress(progress);
+        let proxy = self.proxy.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            kolibri_net::media::upload_video(
+                &url, data, chunk_size, concurrency, false, proxy, progress,
+            )
+            .await
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))
+        })
+    }
+
+    /// await the next server push as {opcode, payload}, None on timeout
+    #[pyo3(signature = (timeout_secs = None))]
+    fn next_push<'py>(
+        &self,
+        py: Python<'py>,
+        timeout_secs: Option<f64>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let push_rx = self.push_rx.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let mut rx = push_rx.lock().await;
+            let result = match timeout_secs {
+                Some(t) => tokio::time::timeout(Duration::from_secs_f64(t), rx.recv())
+                    .await
+                    .ok()
+                    .and_then(|r| r.ok()),
+                None => rx.recv().await.ok(),
+            };
+            drop(rx);
+            Python::with_gil(|py| match result {
+                Some(packet) => {
+                    let dict = PyDict::new(py);
+                    dict.set_item("opcode", packet.opcode)?;
+                    let value = packet.value().unwrap_or(Value::Nil);
+                    dict.set_item("payload", value_to_py(py, &value)?)?;
+                    Ok(dict.into_any().unbind())
+                }
+                None => Ok(py.None()),
+            })
+        })
     }
 
     /// "disconnected" | "connecting" | "connected" | "online"
@@ -830,6 +1126,161 @@ impl CallSignaling {
     }
 }
 
+/// asyncio-native counterpart of [`CallSignaling`]. build it with the async
+/// `connect` staticmethod (`await AsyncCallSignaling.connect(url)`); every
+/// signaling method returns an awaitable driven on the shared tokio runtime.
+#[pyclass]
+struct AsyncCallSignaling {
+    inner: Arc<kolibri_net::calls::Ws2Signaling>,
+    notif_rx: Arc<tokio::sync::Mutex<broadcast::Receiver<serde_json::Value>>>,
+}
+
+#[pymethods]
+impl AsyncCallSignaling {
+    /// connect the ws2 signaling socket and resolve to an `AsyncCallSignaling`
+    #[staticmethod]
+    #[pyo3(signature = (url, user_agent = None, proxy = None))]
+    fn connect<'py>(
+        py: Python<'py>,
+        url: &str,
+        user_agent: Option<String>,
+        proxy: Option<String>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let proxy = match proxy {
+            Some(url) => Some(ProxyConfig::parse(&url).map_err(PyValueError::new_err)?),
+            None => None,
+        };
+        let url = url.to_string();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let inner = kolibri_net::calls::Ws2Signaling::connect_via(
+                &url,
+                user_agent.as_deref(),
+                proxy.as_ref(),
+            )
+            .await
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            let inner = Arc::new(inner);
+            let notif_rx = Arc::new(tokio::sync::Mutex::new(inner.notifications()));
+            Python::with_gil(|py| {
+                Py::new(py, AsyncCallSignaling { inner, notif_rx }).map(|o| o.into_any())
+            })
+        })
+    }
+
+    fn accept_call<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        self.call(py, |s| async move { s.accept_call().await })
+    }
+
+    fn hangup<'py>(&self, py: Python<'py>, reason: &str) -> PyResult<Bound<'py, PyAny>> {
+        let reason = reason.to_string();
+        self.call(py, move |s| async move { s.hangup(&reason).await })
+    }
+
+    fn transmit_sdp<'py>(
+        &self,
+        py: Python<'py>,
+        participant_id: i64,
+        sdp_type: &str,
+        sdp: &str,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let (t, d) = (sdp_type.to_string(), sdp.to_string());
+        self.call(py, move |s| async move {
+            s.transmit_sdp(participant_id, &t, &d).await
+        })
+    }
+
+    fn transmit_candidate<'py>(
+        &self,
+        py: Python<'py>,
+        participant_id: i64,
+        candidate: &str,
+        sdp_mid: &str,
+        sdp_mline_index: i64,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let (c, m) = (candidate.to_string(), sdp_mid.to_string());
+        self.call(py, move |s| async move {
+            s.transmit_candidate(participant_id, &c, &m, sdp_mline_index)
+                .await
+        })
+    }
+
+    fn change_media_settings<'py>(
+        &self,
+        py: Python<'py>,
+        audio: bool,
+        video: bool,
+        screen: bool,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        self.call(py, move |s| async move {
+            s.change_media_settings(audio, video, screen).await
+        })
+    }
+
+    /// raw command with a dict of extra fields
+    fn send_command<'py>(
+        &self,
+        py: Python<'py>,
+        command: &str,
+        extra: &Bound<'_, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let extra = py_to_json(extra)?;
+        let command = command.to_string();
+        self.call(py, move |s| async move {
+            s.send_command(&command, extra).await
+        })
+    }
+
+    /// await the next ws2 notification as a dict, None on timeout
+    #[pyo3(signature = (timeout_secs = None))]
+    fn next_notification<'py>(
+        &self,
+        py: Python<'py>,
+        timeout_secs: Option<f64>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let notif_rx = self.notif_rx.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let mut rx = notif_rx.lock().await;
+            let result = match timeout_secs {
+                Some(t) => tokio::time::timeout(Duration::from_secs_f64(t), rx.recv())
+                    .await
+                    .ok()
+                    .and_then(|r| r.ok()),
+                None => rx.recv().await.ok(),
+            };
+            drop(rx);
+            Python::with_gil(|py| match result {
+                Some(v) => Ok(json_to_py(py, &v)?.unbind()),
+                None => Ok(py.None()),
+            })
+        })
+    }
+
+    fn is_connected(&self) -> bool {
+        self.inner.is_connected()
+    }
+
+    fn close(&self) {
+        self.inner.close();
+    }
+}
+
+impl AsyncCallSignaling {
+    /// drive a signaling call on the shared runtime and resolve to its JSON dict
+    fn call<'py, F, Fut>(&self, py: Python<'py>, f: F) -> PyResult<Bound<'py, PyAny>>
+    where
+        F: FnOnce(Arc<kolibri_net::calls::Ws2Signaling>) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<serde_json::Value, kolibri_net::calls::CallError>> + Send + 'static,
+    {
+        let inner = self.inner.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let value = f(inner)
+                .await
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            Python::with_gil(|py| Ok(json_to_py(py, &value)?.unbind()))
+        })
+    }
+}
+
 /// ws2 `connection` notification => {topology, is_sfu, participants, ice_servers},
 /// plus `peer` when my_user_id is given
 #[pyfunction]
@@ -892,7 +1343,9 @@ fn parse_transmitted_data(
 #[pymodule]
 fn kolibri(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<Session>()?;
+    m.add_class::<AsyncSession>()?;
     m.add_class::<CallSignaling>()?;
+    m.add_class::<AsyncCallSignaling>()?;
     m.add_function(wrap_pyfunction!(auth_mode, m)?)?;
     m.add_function(wrap_pyfunction!(decode_vcp, m)?)?;
     m.add_function(wrap_pyfunction!(parse_connection, m)?)?;
