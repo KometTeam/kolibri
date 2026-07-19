@@ -18,6 +18,7 @@ LZ4/Zstd, полная машина сессии (handshake, keepalive, реко
 | [`kolibri-py`](kolibri-py) | Python-биндинги (pyo3/maturin): синхронный `Session`, звонки, загрузки, нативные dict'ы вместо байтов. |
 | [`kolibri-dart`](kolibri-dart) | Dart/Flutter-биндинги (`flutter_rust_bridge`): async `Future` + пуши/прогресс через `Stream`. |
 | [`kolibri-go`](kolibri-go) | Go-биндинги (cgo поверх C ABI): блокирующий `Session`, wire-log через колбэк. |
+| [`kolibri-kotlin`](kolibri-kotlin) | Kotlin/Android-биндинги (JNI): `suspend`-методы на `Dispatchers.IO`, пуши/нотификации через `Flow`, плюс блокирующий `session.blocking`. |
 
 Идея: session-машина (handshake, ping, реконнект) и разбор протокола живут в
 ядре, поэтому каждая обёртка получает их бесплатно.
@@ -83,6 +84,17 @@ info, _ := s.Connect()                      // handshake
 resp, _ := s.Request(opcode, msgpackBytes)  // запрос/ответ
 ```
 
+**Kotlin:**
+```kotlin
+import ru.kolibri.*
+
+Session.open(Config(host = "host.example")).use { s ->
+    val info = s.connect()                          // handshake -> JSON
+    val resp = s.requestJson(64, """{"key":"val"}""")  // JSON внутрь -> JSON наружу
+    s.pushes().collect { push -> /* серверные пуши */ }
+}
+```
+
 ## Сборка и тесты
 
 **Rust-ядро:**
@@ -108,6 +120,14 @@ flutter_rust_bridge_codegen generate
 dart run build_runner build --delete-conflicting-outputs
 cargo build --manifest-path rust/Cargo.toml
 dart run example/handshake.dart
+```
+
+**Kotlin:**
+```bash
+cd kolibri-kotlin
+./build-rust.sh                 # libkolibri_kotlin для host JVM (или --android для .so по ABI)
+gradle :library:test
+gradle :example:run --args "host.example"
 ```
 
 ## Флаги сборки (feature-гейты)

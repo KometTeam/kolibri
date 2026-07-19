@@ -1,5 +1,9 @@
 /target
 **/rust/target/
+kolibri-swift/.build/
+kolibri-swift/CKolibri.xcframework/
+kolibri-swift/.xcframework-build/
+kolibri-swift/.swiftpm/xcode/xcuserdata/
 Cargo.lock
 /.venv
 **/__pycache__/
@@ -10,3 +14,9 @@ Cargo.lock
 
 # built example binaries
 kolibri-go/kolibri-x86_64
+
+# kolibri-kotlin (Gradle + built native libs)
+kolibri-kotlin/.gradle/
+kolibri-kotlin/build/
+kolibri-kotlin/**/build/
+kolibri-kotlin/library/src/main/jniLibs/

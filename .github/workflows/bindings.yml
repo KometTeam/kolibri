@@ -56,6 +56,69 @@ jobs:
           go build ./...
           go vet ./...
 
+  swift:
+    name: swift (xcframework over C ABI)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust + Apple targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin,aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: kolibri-swift/rust
+
+      - name: Build xcframework (ios + sim + macos)
+        working-directory: kolibri-swift
+        run: ./build-xcframework.sh
+
+      - name: Swift build + test (macOS slice)
+        working-directory: kolibri-swift
+        run: |
+          swift build
+          swift test
+
+      - name: Build for iOS device + simulator
+        working-directory: kolibri-swift
+        run: |
+          xcodebuild -scheme Kolibri -destination 'generic/platform=iOS' build
+          xcodebuild -scheme Kolibri -destination 'generic/platform=iOS Simulator' build
+
+  kotlin:
+    name: kotlin (jni)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: kolibri-kotlin/rust
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10"
+
+      - name: Build native lib
+        working-directory: kolibri-kotlin
+        run: ./build-rust.sh
+
+      - name: Gradle build + test
+        working-directory: kolibri-kotlin
+        run: gradle --no-daemon :library:build
+
   python:
     name: python (pyo3 / maturin)
     runs-on: ubuntu-latest
