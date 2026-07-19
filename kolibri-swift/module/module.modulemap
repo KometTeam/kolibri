@@ -1,0 +1,4 @@
+module CKolibri {
+    header "kolibri.h"
+    export *
+}

@@ -207,8 +207,8 @@ func (s *Session) Request(opcode uint16, payload []byte) ([]byte, error) {
 }
 
 // RequestJSON sends a JSON payload and gets the response as JSON, no msgpack lib
-// needed. {"$bin":"<base64>"} in the request is a binary field; binary in the
-// response comes back as base64.
+// needed. {"$bin":"<base64>"} in the request is a binary field and a "$int:<n>"
+// key is an integer map key; binary in the response comes back as base64.
 func (s *Session) RequestJSON(opcode uint16, jsonIn string) (string, error) {
 	cj := C.CString(jsonIn)
 	defer C.free(unsafe.Pointer(cj))
@@ -234,10 +234,9 @@ func (s *Session) RequestMap(opcode uint16, in map[string]any) (map[string]any, 
 }
 
 // jsonToMap decodes a JSON object string into a map; "" and "null" give an
-// empty map (a request that returns no body). Numbers decode as json.Number so
-// large int64 values (like callsSeed) keep full precision — a plain decode into
-// `any` would turn them into lossy float64. A {"$bin":"<base64>"} object is
-// turned back into a []byte.
+// empty map. Numbers decode as json.Number so large int64 values (like
+// callsSeed) keep full precision; decoding into `any` would make them lossy
+// float64. A {"$bin":"<base64>"} object becomes a []byte.
 func jsonToMap(s string) (map[string]any, error) {
 	if s == "" || s == "null" {
 		return map[string]any{}, nil
@@ -281,8 +280,8 @@ func unescapeBinary(v any) any {
 	}
 }
 
-// escapeBinary turns []byte into {"$bin":"<base64>"} so it survives json.Marshal
-// as binary — plain json would flatten it to an indistinguishable base64 string.
+// escapeBinary turns []byte into {"$bin":"<base64>"} so json.Marshal keeps it
+// distinguishable from a plain base64 string.
 func escapeBinary(v any) any {
 	switch t := v.(type) {
 	case []byte:
@@ -407,7 +406,7 @@ func (s *Session) UploadVideo(url string, data []byte, chunkSize, concurrency in
 // Disconnect stops the session and disables auto-reconnect.
 func (s *Session) Disconnect() { C.kolibri_session_disconnect(s.ptr) }
 
-// Close disconnects and frees the session. Use it (e.g. with defer) when done.
+// Close disconnects and frees the session; use with defer.
 func (s *Session) Close() {
 	if s.ptr != nil {
 		C.kolibri_session_free(s.ptr)

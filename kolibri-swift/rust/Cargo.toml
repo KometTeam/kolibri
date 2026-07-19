@@ -1,0 +1,27 @@
+[package]
+name = "kolibri-swift-ffi"
+version = "0.1.0"
+edition = "2021"
+description = "C ABI over kolibri-net for the Swift binding"
+license = "MIT OR Apache-2.0"
+
+[workspace]
+
+[lib]
+name = "kolibri_swift"
+# staticlib only: the Swift package links the .a (into an .xcframework for iOS, or
+# directly on macOS). A cdylib is unnecessary and its iOS link fails on builtins.
+crate-type = ["staticlib"]
+
+[dependencies]
+kolibri-net = { path = "../../kolibri-net" }
+rmpv = "1"
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

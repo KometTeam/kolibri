@@ -82,7 +82,7 @@ pub(crate) async fn request(
 }
 
 // like [`request`], but the body is streamed: `prefix` bytes, then `body_len`
-// bytes pulled from `reader` (e.g. a file, off disk — never fully in RAM), then
+// bytes pulled from `reader` (e.g. a file, off disk, never fully in RAM), then
 // `suffix` bytes. Caller sets Content-Length to prefix+body_len+suffix.
 #[allow(clippy::too_many_arguments)]
 pub(crate) async fn request_streaming<R: AsyncReadExt + Unpin>(

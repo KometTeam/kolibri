@@ -192,8 +192,8 @@ impl Client {
     }
 
     /// Like [`Client::request`], but returns the raw response packet for any
-    /// command — an error packet comes back as `Ok` (with its payload) rather
-    /// than mapped to `Err`. Only a lost connection or timeout is `Err`.
+    /// command. an error packet comes back as `Ok` with its payload, not mapped
+    /// to `Err`. Only a lost connection or timeout is `Err`.
     pub async fn request_raw(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
         if !self.is_connected() {
             return Err(TransportError::ConnectionClosed);

@@ -18,7 +18,7 @@ pub enum ProxyKind {
     Socks5,
 }
 
-/// An outbound proxy. `username`/`password`, if set, do auth — HTTP Basic or
+/// An outbound proxy. `username`/`password`, if set, do auth: HTTP Basic or
 /// SOCKS5 user/pass.
 #[derive(Debug, Clone)]
 pub struct ProxyConfig {

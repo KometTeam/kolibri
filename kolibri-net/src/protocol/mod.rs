@@ -1,5 +1,5 @@
 //! Komet binary protocol: packet layout, wire codec, stream framing,
-//! compression, opcodes. Transport-agnostic, no I/O; just bytes <-> [`Packet`].
+//! compression, opcodes. Transport-agnostic, no I/O; bytes <-> [`Packet`].
 
 pub mod codec;
 pub mod compress;

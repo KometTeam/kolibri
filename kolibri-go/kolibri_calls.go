@@ -118,7 +118,7 @@ func ParseTransmittedData(notificationJSON string) (*TransmittedData, error) {
 }
 
 // Call is a ws2 signaling client; it connects on ConnectCall and blocks on its
-// own runtime. Signaling only — the WebRTC media stack stays in your app.
+// own runtime. Signaling only; the WebRTC media stack stays in your app.
 type Call struct {
 	ptr *C.KCall
 }

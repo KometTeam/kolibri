@@ -1,0 +1,29 @@
+[package]
+name = "kolibri-kotlin-jni"
+version = "0.1.0"
+edition = "2021"
+description = "JNI bindings over kolibri-net for the Kotlin/Android binding"
+license = "MIT OR Apache-2.0"
+
+[workspace]
+
+[lib]
+name = "kolibri_kotlin"
+# cdylib: the Kotlin side loads it via System.loadLibrary. On Android this is the
+# per-ABI .so packaged in jniLibs; on the JVM it is the .so/.dylib/.dll on
+# java.library.path.
+crate-type = ["cdylib"]
+
+[dependencies]
+kolibri-net = { path = "../../kolibri-net" }
+jni = "0.21"
+rmpv = "1"
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

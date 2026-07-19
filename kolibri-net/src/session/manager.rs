@@ -121,7 +121,7 @@ impl Session {
         }
     }
 
-    /// like [`Session::request`], but returns the raw response packet — an error
+    /// like [`Session::request`], but returns the raw response packet. an error
     /// packet comes back as `Ok` with its payload, not mapped to `Err`.
     pub async fn request_raw(&self, opcode: u16, payload: &[u8]) -> Result<Packet, TransportError> {
         let client = self.shared.client.lock().unwrap().clone();
