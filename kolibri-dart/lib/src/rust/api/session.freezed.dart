@@ -1,5 +1,5 @@
-// coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
@@ -9,112 +9,287 @@ part of 'session.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// dart format off
 T _$identity<T>(T value) => value;
-
-final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
 
 /// @nodoc
 mixin _$UploadEvent {
-  @optionalTypeArgs
-  TResult when<TResult extends Object?>({
-    required TResult Function(BigInt sent, BigInt total) progress,
-    required TResult Function(int status, Uint8List body) done,
-    required TResult Function(String message) error,
-  }) =>
-      throw _privateConstructorUsedError;
-  @optionalTypeArgs
-  TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(BigInt sent, BigInt total)? progress,
-    TResult? Function(int status, Uint8List body)? done,
-    TResult? Function(String message)? error,
-  }) =>
-      throw _privateConstructorUsedError;
-  @optionalTypeArgs
-  TResult maybeWhen<TResult extends Object?>({
-    TResult Function(BigInt sent, BigInt total)? progress,
-    TResult Function(int status, Uint8List body)? done,
-    TResult Function(String message)? error,
-    required TResult orElse(),
-  }) =>
-      throw _privateConstructorUsedError;
-  @optionalTypeArgs
-  TResult map<TResult extends Object?>({
-    required TResult Function(UploadEvent_Progress value) progress,
-    required TResult Function(UploadEvent_Done value) done,
-    required TResult Function(UploadEvent_Error value) error,
-  }) =>
-      throw _privateConstructorUsedError;
-  @optionalTypeArgs
-  TResult? mapOrNull<TResult extends Object?>({
-    TResult? Function(UploadEvent_Progress value)? progress,
-    TResult? Function(UploadEvent_Done value)? done,
-    TResult? Function(UploadEvent_Error value)? error,
-  }) =>
-      throw _privateConstructorUsedError;
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is UploadEvent);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'UploadEvent()';
+  }
+}
+
+/// @nodoc
+class $UploadEventCopyWith<$Res> {
+  $UploadEventCopyWith(UploadEvent _, $Res Function(UploadEvent) __);
+}
+
+/// Adds pattern-matching-related methods to [UploadEvent].
+extension UploadEventPatterns on UploadEvent {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
     TResult Function(UploadEvent_Progress value)? progress,
     TResult Function(UploadEvent_Done value)? done,
     TResult Function(UploadEvent_Error value)? error,
     required TResult orElse(),
-  }) =>
-      throw _privateConstructorUsedError;
+  }) {
+    final _that = this;
+    switch (_that) {
+      case UploadEvent_Progress() when progress != null:
+        return progress(_that);
+      case UploadEvent_Done() when done != null:
+        return done(_that);
+      case UploadEvent_Error() when error != null:
+        return error(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(UploadEvent_Progress value) progress,
+    required TResult Function(UploadEvent_Done value) done,
+    required TResult Function(UploadEvent_Error value) error,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case UploadEvent_Progress():
+        return progress(_that);
+      case UploadEvent_Done():
+        return done(_that);
+      case UploadEvent_Error():
+        return error(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(UploadEvent_Progress value)? progress,
+    TResult? Function(UploadEvent_Done value)? done,
+    TResult? Function(UploadEvent_Error value)? error,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case UploadEvent_Progress() when progress != null:
+        return progress(_that);
+      case UploadEvent_Done() when done != null:
+        return done(_that);
+      case UploadEvent_Error() when error != null:
+        return error(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(BigInt sent, BigInt total)? progress,
+    TResult Function(int status, Uint8List body)? done,
+    TResult Function(String message)? error,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case UploadEvent_Progress() when progress != null:
+        return progress(_that.sent, _that.total);
+      case UploadEvent_Done() when done != null:
+        return done(_that.status, _that.body);
+      case UploadEvent_Error() when error != null:
+        return error(_that.message);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(BigInt sent, BigInt total) progress,
+    required TResult Function(int status, Uint8List body) done,
+    required TResult Function(String message) error,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case UploadEvent_Progress():
+        return progress(_that.sent, _that.total);
+      case UploadEvent_Done():
+        return done(_that.status, _that.body);
+      case UploadEvent_Error():
+        return error(_that.message);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(BigInt sent, BigInt total)? progress,
+    TResult? Function(int status, Uint8List body)? done,
+    TResult? Function(String message)? error,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case UploadEvent_Progress() when progress != null:
+        return progress(_that.sent, _that.total);
+      case UploadEvent_Done() when done != null:
+        return done(_that.status, _that.body);
+      case UploadEvent_Error() when error != null:
+        return error(_that.message);
+      case _:
+        return null;
+    }
+  }
 }
 
 /// @nodoc
-abstract class $UploadEventCopyWith<$Res> {
-  factory $UploadEventCopyWith(
-          UploadEvent value, $Res Function(UploadEvent) then) =
-      _$UploadEventCopyWithImpl<$Res, UploadEvent>;
-}
 
-/// @nodoc
-class _$UploadEventCopyWithImpl<$Res, $Val extends UploadEvent>
-    implements $UploadEventCopyWith<$Res> {
-  _$UploadEventCopyWithImpl(this._value, this._then);
+class UploadEvent_Progress extends UploadEvent {
+  const UploadEvent_Progress({required this.sent, required this.total})
+      : super._();
 
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
+  final BigInt sent;
+  final BigInt total;
 
   /// Create a copy of UploadEvent
   /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $UploadEvent_ProgressCopyWith<UploadEvent_Progress> get copyWith =>
+      _$UploadEvent_ProgressCopyWithImpl<UploadEvent_Progress>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is UploadEvent_Progress &&
+            (identical(other.sent, sent) || other.sent == sent) &&
+            (identical(other.total, total) || other.total == total));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, sent, total);
+
+  @override
+  String toString() {
+    return 'UploadEvent.progress(sent: $sent, total: $total)';
+  }
 }
 
 /// @nodoc
-abstract class _$$UploadEvent_ProgressImplCopyWith<$Res> {
-  factory _$$UploadEvent_ProgressImplCopyWith(_$UploadEvent_ProgressImpl value,
-          $Res Function(_$UploadEvent_ProgressImpl) then) =
-      __$$UploadEvent_ProgressImplCopyWithImpl<$Res>;
+abstract mixin class $UploadEvent_ProgressCopyWith<$Res>
+    implements $UploadEventCopyWith<$Res> {
+  factory $UploadEvent_ProgressCopyWith(UploadEvent_Progress value,
+          $Res Function(UploadEvent_Progress) _then) =
+      _$UploadEvent_ProgressCopyWithImpl;
   @useResult
   $Res call({BigInt sent, BigInt total});
 }
 
 /// @nodoc
-class __$$UploadEvent_ProgressImplCopyWithImpl<$Res>
-    extends _$UploadEventCopyWithImpl<$Res, _$UploadEvent_ProgressImpl>
-    implements _$$UploadEvent_ProgressImplCopyWith<$Res> {
-  __$$UploadEvent_ProgressImplCopyWithImpl(_$UploadEvent_ProgressImpl _value,
-      $Res Function(_$UploadEvent_ProgressImpl) _then)
-      : super(_value, _then);
+class _$UploadEvent_ProgressCopyWithImpl<$Res>
+    implements $UploadEvent_ProgressCopyWith<$Res> {
+  _$UploadEvent_ProgressCopyWithImpl(this._self, this._then);
+
+  final UploadEvent_Progress _self;
+  final $Res Function(UploadEvent_Progress) _then;
 
   /// Create a copy of UploadEvent
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
-  @override
   $Res call({
     Object? sent = null,
     Object? total = null,
   }) {
-    return _then(_$UploadEvent_ProgressImpl(
+    return _then(UploadEvent_Progress(
       sent: null == sent
-          ? _value.sent
+          ? _self.sent
           : sent // ignore: cast_nullable_to_non_nullable
               as BigInt,
       total: null == total
-          ? _value.total
+          ? _self.total
           : total // ignore: cast_nullable_to_non_nullable
               as BigInt,
     ));
@@ -123,186 +298,25 @@ class __$$UploadEvent_ProgressImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$UploadEvent_ProgressImpl extends UploadEvent_Progress {
-  const _$UploadEvent_ProgressImpl({required this.sent, required this.total})
+class UploadEvent_Done extends UploadEvent {
+  const UploadEvent_Done({required this.status, required this.body})
       : super._();
 
-  @override
-  final BigInt sent;
-  @override
-  final BigInt total;
-
-  @override
-  String toString() {
-    return 'UploadEvent.progress(sent: $sent, total: $total)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$UploadEvent_ProgressImpl &&
-            (identical(other.sent, sent) || other.sent == sent) &&
-            (identical(other.total, total) || other.total == total));
-  }
-
-  @override
-  int get hashCode => Object.hash(runtimeType, sent, total);
-
-  /// Create a copy of UploadEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$UploadEvent_ProgressImplCopyWith<_$UploadEvent_ProgressImpl>
-      get copyWith =>
-          __$$UploadEvent_ProgressImplCopyWithImpl<_$UploadEvent_ProgressImpl>(
-              this, _$identity);
-
-  @override
-  @optionalTypeArgs
-  TResult when<TResult extends Object?>({
-    required TResult Function(BigInt sent, BigInt total) progress,
-    required TResult Function(int status, Uint8List body) done,
-    required TResult Function(String message) error,
-  }) {
-    return progress(sent, total);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(BigInt sent, BigInt total)? progress,
-    TResult? Function(int status, Uint8List body)? done,
-    TResult? Function(String message)? error,
-  }) {
-    return progress?.call(sent, total);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult maybeWhen<TResult extends Object?>({
-    TResult Function(BigInt sent, BigInt total)? progress,
-    TResult Function(int status, Uint8List body)? done,
-    TResult Function(String message)? error,
-    required TResult orElse(),
-  }) {
-    if (progress != null) {
-      return progress(sent, total);
-    }
-    return orElse();
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult map<TResult extends Object?>({
-    required TResult Function(UploadEvent_Progress value) progress,
-    required TResult Function(UploadEvent_Done value) done,
-    required TResult Function(UploadEvent_Error value) error,
-  }) {
-    return progress(this);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult? mapOrNull<TResult extends Object?>({
-    TResult? Function(UploadEvent_Progress value)? progress,
-    TResult? Function(UploadEvent_Done value)? done,
-    TResult? Function(UploadEvent_Error value)? error,
-  }) {
-    return progress?.call(this);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult maybeMap<TResult extends Object?>({
-    TResult Function(UploadEvent_Progress value)? progress,
-    TResult Function(UploadEvent_Done value)? done,
-    TResult Function(UploadEvent_Error value)? error,
-    required TResult orElse(),
-  }) {
-    if (progress != null) {
-      return progress(this);
-    }
-    return orElse();
-  }
-}
-
-abstract class UploadEvent_Progress extends UploadEvent {
-  const factory UploadEvent_Progress(
-      {required final BigInt sent,
-      required final BigInt total}) = _$UploadEvent_ProgressImpl;
-  const UploadEvent_Progress._() : super._();
-
-  BigInt get sent;
-  BigInt get total;
-
-  /// Create a copy of UploadEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$UploadEvent_ProgressImplCopyWith<_$UploadEvent_ProgressImpl>
-      get copyWith => throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class _$$UploadEvent_DoneImplCopyWith<$Res> {
-  factory _$$UploadEvent_DoneImplCopyWith(_$UploadEvent_DoneImpl value,
-          $Res Function(_$UploadEvent_DoneImpl) then) =
-      __$$UploadEvent_DoneImplCopyWithImpl<$Res>;
-  @useResult
-  $Res call({int status, Uint8List body});
-}
-
-/// @nodoc
-class __$$UploadEvent_DoneImplCopyWithImpl<$Res>
-    extends _$UploadEventCopyWithImpl<$Res, _$UploadEvent_DoneImpl>
-    implements _$$UploadEvent_DoneImplCopyWith<$Res> {
-  __$$UploadEvent_DoneImplCopyWithImpl(_$UploadEvent_DoneImpl _value,
-      $Res Function(_$UploadEvent_DoneImpl) _then)
-      : super(_value, _then);
-
-  /// Create a copy of UploadEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? status = null,
-    Object? body = null,
-  }) {
-    return _then(_$UploadEvent_DoneImpl(
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as int,
-      body: null == body
-          ? _value.body
-          : body // ignore: cast_nullable_to_non_nullable
-              as Uint8List,
-    ));
-  }
-}
-
-/// @nodoc
-
-class _$UploadEvent_DoneImpl extends UploadEvent_Done {
-  const _$UploadEvent_DoneImpl({required this.status, required this.body})
-      : super._();
-
-  @override
   final int status;
-  @override
   final Uint8List body;
 
-  @override
-  String toString() {
-    return 'UploadEvent.done(status: $status, body: $body)';
-  }
+  /// Create a copy of UploadEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $UploadEvent_DoneCopyWith<UploadEvent_Done> get copyWith =>
+      _$UploadEvent_DoneCopyWithImpl<UploadEvent_Done>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$UploadEvent_DoneImpl &&
+            other is UploadEvent_Done &&
             (identical(other.status, status) || other.status == status) &&
             const DeepCollectionEquality().equals(other.body, body));
   }
@@ -311,245 +325,112 @@ class _$UploadEvent_DoneImpl extends UploadEvent_Done {
   int get hashCode => Object.hash(
       runtimeType, status, const DeepCollectionEquality().hash(body));
 
-  /// Create a copy of UploadEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  @pragma('vm:prefer-inline')
-  _$$UploadEvent_DoneImplCopyWith<_$UploadEvent_DoneImpl> get copyWith =>
-      __$$UploadEvent_DoneImplCopyWithImpl<_$UploadEvent_DoneImpl>(
-          this, _$identity);
-
-  @override
-  @optionalTypeArgs
-  TResult when<TResult extends Object?>({
-    required TResult Function(BigInt sent, BigInt total) progress,
-    required TResult Function(int status, Uint8List body) done,
-    required TResult Function(String message) error,
-  }) {
-    return done(status, body);
+  String toString() {
+    return 'UploadEvent.done(status: $status, body: $body)';
   }
-
-  @override
-  @optionalTypeArgs
-  TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(BigInt sent, BigInt total)? progress,
-    TResult? Function(int status, Uint8List body)? done,
-    TResult? Function(String message)? error,
-  }) {
-    return done?.call(status, body);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult maybeWhen<TResult extends Object?>({
-    TResult Function(BigInt sent, BigInt total)? progress,
-    TResult Function(int status, Uint8List body)? done,
-    TResult Function(String message)? error,
-    required TResult orElse(),
-  }) {
-    if (done != null) {
-      return done(status, body);
-    }
-    return orElse();
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult map<TResult extends Object?>({
-    required TResult Function(UploadEvent_Progress value) progress,
-    required TResult Function(UploadEvent_Done value) done,
-    required TResult Function(UploadEvent_Error value) error,
-  }) {
-    return done(this);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult? mapOrNull<TResult extends Object?>({
-    TResult? Function(UploadEvent_Progress value)? progress,
-    TResult? Function(UploadEvent_Done value)? done,
-    TResult? Function(UploadEvent_Error value)? error,
-  }) {
-    return done?.call(this);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult maybeMap<TResult extends Object?>({
-    TResult Function(UploadEvent_Progress value)? progress,
-    TResult Function(UploadEvent_Done value)? done,
-    TResult Function(UploadEvent_Error value)? error,
-    required TResult orElse(),
-  }) {
-    if (done != null) {
-      return done(this);
-    }
-    return orElse();
-  }
-}
-
-abstract class UploadEvent_Done extends UploadEvent {
-  const factory UploadEvent_Done(
-      {required final int status,
-      required final Uint8List body}) = _$UploadEvent_DoneImpl;
-  const UploadEvent_Done._() : super._();
-
-  int get status;
-  Uint8List get body;
-
-  /// Create a copy of UploadEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$UploadEvent_DoneImplCopyWith<_$UploadEvent_DoneImpl> get copyWith =>
-      throw _privateConstructorUsedError;
 }
 
 /// @nodoc
-abstract class _$$UploadEvent_ErrorImplCopyWith<$Res> {
-  factory _$$UploadEvent_ErrorImplCopyWith(_$UploadEvent_ErrorImpl value,
-          $Res Function(_$UploadEvent_ErrorImpl) then) =
-      __$$UploadEvent_ErrorImplCopyWithImpl<$Res>;
+abstract mixin class $UploadEvent_DoneCopyWith<$Res>
+    implements $UploadEventCopyWith<$Res> {
+  factory $UploadEvent_DoneCopyWith(
+          UploadEvent_Done value, $Res Function(UploadEvent_Done) _then) =
+      _$UploadEvent_DoneCopyWithImpl;
   @useResult
-  $Res call({String message});
+  $Res call({int status, Uint8List body});
 }
 
 /// @nodoc
-class __$$UploadEvent_ErrorImplCopyWithImpl<$Res>
-    extends _$UploadEventCopyWithImpl<$Res, _$UploadEvent_ErrorImpl>
-    implements _$$UploadEvent_ErrorImplCopyWith<$Res> {
-  __$$UploadEvent_ErrorImplCopyWithImpl(_$UploadEvent_ErrorImpl _value,
-      $Res Function(_$UploadEvent_ErrorImpl) _then)
-      : super(_value, _then);
+class _$UploadEvent_DoneCopyWithImpl<$Res>
+    implements $UploadEvent_DoneCopyWith<$Res> {
+  _$UploadEvent_DoneCopyWithImpl(this._self, this._then);
+
+  final UploadEvent_Done _self;
+  final $Res Function(UploadEvent_Done) _then;
 
   /// Create a copy of UploadEvent
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
-  @override
   $Res call({
-    Object? message = null,
+    Object? status = null,
+    Object? body = null,
   }) {
-    return _then(_$UploadEvent_ErrorImpl(
-      message: null == message
-          ? _value.message
-          : message // ignore: cast_nullable_to_non_nullable
-              as String,
+    return _then(UploadEvent_Done(
+      status: null == status
+          ? _self.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as int,
+      body: null == body
+          ? _self.body
+          : body // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
     ));
   }
 }
 
 /// @nodoc
 
-class _$UploadEvent_ErrorImpl extends UploadEvent_Error {
-  const _$UploadEvent_ErrorImpl({required this.message}) : super._();
+class UploadEvent_Error extends UploadEvent {
+  const UploadEvent_Error({required this.message}) : super._();
 
-  @override
   final String message;
 
-  @override
-  String toString() {
-    return 'UploadEvent.error(message: $message)';
-  }
+  /// Create a copy of UploadEvent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $UploadEvent_ErrorCopyWith<UploadEvent_Error> get copyWith =>
+      _$UploadEvent_ErrorCopyWithImpl<UploadEvent_Error>(this, _$identity);
 
   @override
   bool operator ==(Object other) {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
-            other is _$UploadEvent_ErrorImpl &&
+            other is UploadEvent_Error &&
             (identical(other.message, message) || other.message == message));
   }
 
   @override
   int get hashCode => Object.hash(runtimeType, message);
 
+  @override
+  String toString() {
+    return 'UploadEvent.error(message: $message)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $UploadEvent_ErrorCopyWith<$Res>
+    implements $UploadEventCopyWith<$Res> {
+  factory $UploadEvent_ErrorCopyWith(
+          UploadEvent_Error value, $Res Function(UploadEvent_Error) _then) =
+      _$UploadEvent_ErrorCopyWithImpl;
+  @useResult
+  $Res call({String message});
+}
+
+/// @nodoc
+class _$UploadEvent_ErrorCopyWithImpl<$Res>
+    implements $UploadEvent_ErrorCopyWith<$Res> {
+  _$UploadEvent_ErrorCopyWithImpl(this._self, this._then);
+
+  final UploadEvent_Error _self;
+  final $Res Function(UploadEvent_Error) _then;
+
   /// Create a copy of UploadEvent
   /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
   @pragma('vm:prefer-inline')
-  _$$UploadEvent_ErrorImplCopyWith<_$UploadEvent_ErrorImpl> get copyWith =>
-      __$$UploadEvent_ErrorImplCopyWithImpl<_$UploadEvent_ErrorImpl>(
-          this, _$identity);
-
-  @override
-  @optionalTypeArgs
-  TResult when<TResult extends Object?>({
-    required TResult Function(BigInt sent, BigInt total) progress,
-    required TResult Function(int status, Uint8List body) done,
-    required TResult Function(String message) error,
+  $Res call({
+    Object? message = null,
   }) {
-    return error(message);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult? whenOrNull<TResult extends Object?>({
-    TResult? Function(BigInt sent, BigInt total)? progress,
-    TResult? Function(int status, Uint8List body)? done,
-    TResult? Function(String message)? error,
-  }) {
-    return error?.call(message);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult maybeWhen<TResult extends Object?>({
-    TResult Function(BigInt sent, BigInt total)? progress,
-    TResult Function(int status, Uint8List body)? done,
-    TResult Function(String message)? error,
-    required TResult orElse(),
-  }) {
-    if (error != null) {
-      return error(message);
-    }
-    return orElse();
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult map<TResult extends Object?>({
-    required TResult Function(UploadEvent_Progress value) progress,
-    required TResult Function(UploadEvent_Done value) done,
-    required TResult Function(UploadEvent_Error value) error,
-  }) {
-    return error(this);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult? mapOrNull<TResult extends Object?>({
-    TResult? Function(UploadEvent_Progress value)? progress,
-    TResult? Function(UploadEvent_Done value)? done,
-    TResult? Function(UploadEvent_Error value)? error,
-  }) {
-    return error?.call(this);
-  }
-
-  @override
-  @optionalTypeArgs
-  TResult maybeMap<TResult extends Object?>({
-    TResult Function(UploadEvent_Progress value)? progress,
-    TResult Function(UploadEvent_Done value)? done,
-    TResult Function(UploadEvent_Error value)? error,
-    required TResult orElse(),
-  }) {
-    if (error != null) {
-      return error(this);
-    }
-    return orElse();
+    return _then(UploadEvent_Error(
+      message: null == message
+          ? _self.message
+          : message // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
   }
 }
 
-abstract class UploadEvent_Error extends UploadEvent {
-  const factory UploadEvent_Error({required final String message}) =
-      _$UploadEvent_ErrorImpl;
-  const UploadEvent_Error._() : super._();
-
-  String get message;
-
-  /// Create a copy of UploadEvent
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$UploadEvent_ErrorImplCopyWith<_$UploadEvent_ErrorImpl> get copyWith =>
-      throw _privateConstructorUsedError;
-}
+// dart format on

@@ -1,67 +1,104 @@
-# kolibri (Dart)
+# kolibri
 
-Dart / Flutter bindings for [`kolibri-net`](../kolibri-net) via
-[`flutter_rust_bridge`](https://github.com/fzyzcjy/flutter_rust_bridge) (v2).
-Async Rust maps to Dart `Future`s, server pushes to a Dart `Stream`. Payloads
-cross the boundary as raw MessagePack bytes (`Uint8List`) — decode them on the
-Dart side (e.g. with `msgpack_dart`), matching the "bytes in, bytes out" core.
+Dart/Flutter bindings for the **Kolibri** messaging protocol, powered by a Rust
+core ([`kolibri-net`](https://github.com/KometTeam/kolibri)) via
+[`flutter_rust_bridge`](https://github.com/fzyzcjy/flutter_rust_bridge) v2.
 
-## Layout
+Async Rust maps to Dart `Future`s and server pushes to a Dart `Stream`. Payloads
+cross the boundary as MessagePack — either as raw bytes (`Uint8List`) or, via the
+built-in helpers, as plain Dart `Map`s.
 
+- **Full protocol session** — handshake, request/response, server pushes, ping,
+  auto-reconnect.
+- **Media upload** as a progress `Stream<UploadEvent>`.
+- **Call signaling** over WebSocket, with an anti-spoof device fingerprint.
+- **All native platforms** — Android, iOS, macOS, Linux, Windows.
+
+## Requirements
+
+This is an FFI plugin whose native library is compiled from Rust **on the
+consumer's machine at app build time** (via [cargokit](https://github.com/irondash/cargokit)).
+Anyone building an app that depends on `kolibri` therefore needs a
+[Rust toolchain](https://rustup.rs) installed. For Android you also need the
+NDK and the relevant `rustup` targets (e.g. `aarch64-linux-android`).
+
+## Install
+
+```yaml
+dependencies:
+  kolibri: ^0.1.1
 ```
-kolibri-dart/
-├── rust/                 Rust crate (flutter_rust_bridge API over kolibri-net)
-│   └── src/api/session.rs
-├── lib/
-│   ├── kolibri.dart      hand-written ergonomic wrapper (defaults + init)
-│   └── src/rust/         generated bindings (flutter_rust_bridge_codegen)
-├── example/handshake.dart
-└── flutter_rust_bridge.yaml
-```
-
-## Build
 
 ```bash
-dart pub get
-flutter_rust_bridge_codegen generate            # regenerate bindings after Rust API changes
-dart run build_runner build --delete-conflicting-outputs  # freezed classes for UploadEvent
-cargo build --manifest-path rust/Cargo.toml     # build the native library
+flutter pub get
 ```
 
-## Run (pure Dart)
-
-```bash
-dart run example/handshake.dart              # loads rust/target/debug/libkolibri_dart.dylib
-```
-
-## Usage
+## Quick start (Flutter)
 
 ```dart
 import 'package:kolibri/kolibri.dart';
 
-await initKolibri(libraryPath: '.../libkolibri_dart.dylib'); // omit on Flutter
-final s = openSession(host: 'api.oneme.ru');                 // override device fields to spoof
+// On Flutter the bundled native library is found automatically.
+await initKolibri();
 
-final info = await s.connect();               // sessionInit handshake
+final session = openSession(host: 'api.oneme.ru'); // override device fields to spoof
+final info = await session.connect();               // sessionInit handshake
 print(info.callsSeed);
 
-final respBytes = await s.request(opcode: 64, payload: msgpackBytes); // Uint8List → Uint8List
-s.pushes().listen((p) => print('push ${p.opcode}'));         // Stream<PushEvent>
+// Request/response with Map payloads (msgpack handled by the core).
+final resp = await session.requestMap(64, {'text': 'hello'});
+print(resp);
 
-// media upload → Stream<UploadEvent> (Progress → Done/Error)
-await for (final e in s.uploadFile(url: cdnUrl, data: bytes, filename: 'v.mp4')) {
-  switch (e) {
-    case UploadEvent_Progress(:final sent, :final total): /* … */
-    case UploadEvent_Done(:final status, :final body): /* … */
-    case UploadEvent_Error(:final message): /* … */
-  }
-}
-s.disconnect();
+// Server pushes as a stream of (opcode, payload) records.
+session.pushesMap().listen((push) {
+  final (opcode, payload) = push;
+  print('push $opcode: $payload');
+});
+
+session.disconnect();
 ```
 
-## Flutter integration
+Prefer raw bytes? `session.request(opcode: 64, payload: msgpackBytes)` returns a
+`Uint8List` — "bytes in, bytes out", matching the core.
 
-For a real Flutter app, build the native library for each target ABI
-(`cargo-ndk` for Android, an xcframework for iOS, the platform `.so`/`.dll`/`.dylib`
-for desktop) and let `flutter_rust_bridge`'s default loader find the bundled
-library — then `initKolibri()` with no `libraryPath`.
+## Media upload
+
+```dart
+await for (final event in session.uploadFile(url: cdnUrl, data: bytes, filename: 'clip.mp4')) {
+  switch (event) {
+    case UploadEvent_Progress(:final sent, :final total): print('$sent / $total');
+    case UploadEvent_Done(:final status, :final body):    print('done $status');
+    case UploadEvent_Error(:final message):               print('error $message');
+  }
+}
+```
+
+## Pure Dart (no Flutter)
+
+Build the native library yourself and pass its path to `initKolibri`:
+
+```bash
+cargo build --manifest-path rust/Cargo.toml
+dart run example/example.dart   # loads rust/target/debug/libkolibri_dart.dylib
+```
+
+```dart
+await initKolibri(libraryPath: '/path/to/libkolibri_dart.dylib');
+```
+
+See the [`example/`](example) directory for runnable scripts covering the
+handshake, uploads, call signaling and the device fingerprint.
+
+## Regenerating the bindings
+
+The Dart bindings and freezed classes are checked in. Regenerate them after
+changing the Rust API:
+
+```bash
+flutter_rust_bridge_codegen generate         # bindings from rust/src/api
+dart run build_runner build                   # freezed classes (UploadEvent)
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
