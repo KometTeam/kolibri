@@ -1,0 +1,2 @@
+[patch.crates-io]
+kolibri-net = { path = "../../kolibri-net" }

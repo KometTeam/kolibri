@@ -12,6 +12,8 @@ built-in helpers, as plain Dart `Map`s.
   auto-reconnect.
 - **Media upload** as a progress `Stream<UploadEvent>`.
 - **Call signaling** over WebSocket, with an anti-spoof device fingerprint.
+- **Bundled Минцифры root** behind `setTrustMincifryCa(enabled: true)`, for hosts
+  that chain to Russian Trusted Root/Sub CA. Off by default.
 - **All native platforms** — Android, iOS, macOS, Linux, Windows.
 
 ## Requirements
@@ -26,7 +28,7 @@ NDK and the relevant `rustup` targets (e.g. `aarch64-linux-android`).
 
 ```yaml
 dependencies:
-  kolibri: ^0.1.1
+  kolibri: ^0.1.2
 ```
 
 ```bash

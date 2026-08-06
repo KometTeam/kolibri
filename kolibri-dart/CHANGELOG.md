@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.2
+
+- Expose `setTrustMincifryCa` / `trustMincifryCa`: opt in to the bundled
+  Минцифры root (Russian Trusted Root + Sub CA) for hosts that chain to it,
+  such as `api2.oneme.ru`. Off by default; covers the session socket, media
+  uploads and ws2 call signaling.
+- Depend on `kolibri-net` from crates.io instead of a workspace path, so the
+  Rust core resolves when the package is consumed from pub.dev.
+
 ## 0.1.1
 
 - Upgrade to `freezed` / `freezed_annotation` 3.x.
