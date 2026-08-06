@@ -22,6 +22,8 @@ export 'src/rust/api/session.dart'
         UploadEvent_Done,
         UploadEvent_Error;
 
+export 'src/rust/api/tls.dart' show setTrustMincifryCa, trustMincifryCa;
+
 export 'src/rust/api/calls.dart'
     show
         CallSignaling,

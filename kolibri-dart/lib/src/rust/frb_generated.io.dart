@@ -5,6 +5,7 @@
 
 import 'api/calls.dart';
 import 'api/session.dart';
+import 'api/tls.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;

@@ -5,6 +5,7 @@
 
 import 'api/calls.dart';
 import 'api/session.dart';
+import 'api/tls.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -69,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1110090615;
+  int get rustContentHash => -1444283445;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -221,6 +222,10 @@ abstract class RustLibApi extends BaseApi {
 
   TransmittedData? crateApiCallsParseTransmittedData(
       {required String notificationJson});
+
+  void crateApiTlsSetTrustMincifryCa({required bool enabled});
+
+  bool crateApiTlsTrustMincifryCa();
 
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_CallSignaling;
@@ -1244,6 +1249,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(
         debugName: "parse_transmitted_data",
         argNames: ["notificationJson"],
+      );
+
+  @override
+  void crateApiTlsSetTrustMincifryCa({required bool enabled}) {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_bool(enabled, serializer);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiTlsSetTrustMincifryCaConstMeta,
+      argValues: [enabled],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiTlsSetTrustMincifryCaConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_trust_mincifry_ca",
+        argNames: ["enabled"],
+      );
+
+  @override
+  bool crateApiTlsTrustMincifryCa() {
+    return handler.executeSync(SyncTask(
+      callFfi: () {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34)!;
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: null,
+      ),
+      constMeta: kCrateApiTlsTrustMincifryCaConstMeta,
+      argValues: [],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiTlsTrustMincifryCaConstMeta => const TaskConstMeta(
+        debugName: "trust_mincifry_ca",
+        argNames: [],
       );
 
   RustArcIncrementStrongCountFnType

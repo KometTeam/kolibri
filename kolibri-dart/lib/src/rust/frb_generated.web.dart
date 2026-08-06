@@ -8,6 +8,7 @@
 
 import 'api/calls.dart';
 import 'api/session.dart';
+import 'api/tls.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
