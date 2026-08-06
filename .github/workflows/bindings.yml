@@ -149,5 +149,5 @@ jobs:
       - name: Install + import smoke test
         working-directory: kolibri-py
         run: |
-          pip install --no-index --find-links dist kolibri
+          pip install --no-index --find-links dist kolibri-py
           python -c "import kolibri; assert hasattr(kolibri, 'Session'); print('import OK')"
