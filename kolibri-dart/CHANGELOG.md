@@ -6,8 +6,9 @@
   Минцифры root (Russian Trusted Root + Sub CA) for hosts that chain to it,
   such as `api2.oneme.ru`. Off by default; covers the session socket, media
   uploads and ws2 call signaling.
-- Depend on `kolibri-net` from crates.io instead of a workspace path, so the
-  Rust core resolves when the package is consumed from pub.dev.
+- Depend on `kolibri-net` by git tag instead of a workspace path, so the Rust
+  core resolves when the package is consumed from pub.dev. Building an app that
+  uses this package now needs git access to the repository.
 
 ## 0.1.1
 

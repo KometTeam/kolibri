@@ -21,8 +21,10 @@ built-in helpers, as plain Dart `Map`s.
 This is an FFI plugin whose native library is compiled from Rust **on the
 consumer's machine at app build time** (via [cargokit](https://github.com/irondash/cargokit)).
 Anyone building an app that depends on `kolibri` therefore needs a
-[Rust toolchain](https://rustup.rs) installed. For Android you also need the
-NDK and the relevant `rustup` targets (e.g. `aarch64-linux-android`).
+[Rust toolchain](https://rustup.rs) installed, plus `git` and network access to
+this repository — the Rust core (`kolibri-net`) is pulled from a git tag. For
+Android you also need the NDK and the relevant `rustup` targets (e.g.
+`aarch64-linux-android`).
 
 ## Install
 
