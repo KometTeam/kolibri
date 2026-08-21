@@ -326,9 +326,7 @@ fn build_handshake_payload(cfg: &HandshakeConfig) -> Vec<u8> {
             Value::from("pushDeviceType"),
             Value::from(ua.push_device_type.clone()),
         ),
-        (Value::from("arch"), Value::from(ua.arch.clone())),
         (Value::from("locale"), Value::from(ua.locale.clone())),
-        (Value::from("buildNumber"), Value::from(ua.build_number)),
         (
             Value::from("deviceName"),
             Value::from(ua.device_name.clone()),
@@ -347,20 +345,29 @@ fn build_handshake_payload(cfg: &HandshakeConfig) -> Vec<u8> {
     if let Some(is_pwa) = ua.is_pwa {
         user_agent_fields.push((Value::from("isPwa"), Value::from(is_pwa)));
     }
+    if !ua.arch.is_empty() {
+        user_agent_fields.push((Value::from("arch"), Value::from(ua.arch.clone())));
+    }
+    if ua.build_number != 0 {
+        user_agent_fields.push((Value::from("buildNumber"), Value::from(ua.build_number)));
+    }
     let user_agent = Value::Map(user_agent_fields);
-    let payload = Value::Map(vec![
-        (
+    let mut fields = Vec::with_capacity(4);
+    if !cfg.instance_id.is_empty() {
+        fields.push((
             Value::from("mt_instanceid"),
             Value::from(cfg.instance_id.clone()),
-        ),
-        (Value::from("userAgent"), user_agent),
-        (
+        ));
+    }
+    fields.push((Value::from("userAgent"), user_agent));
+    if cfg.client_session_id != 0 {
+        fields.push((
             Value::from("clientSessionId"),
             Value::from(cfg.client_session_id),
-        ),
-        (Value::from("deviceId"), Value::from(cfg.device_id.clone())),
-    ]);
-    encode_value(&payload)
+        ));
+    }
+    fields.push((Value::from("deviceId"), Value::from(cfg.device_id.clone())));
+    encode_value(&Value::Map(fields))
 }
 
 fn build_ping_payload(interactive: bool) -> Vec<u8> {

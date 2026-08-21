@@ -10,7 +10,7 @@ crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 flutter_rust_bridge = "=2.12.0"
-kolibri-net = { git = "https://github.com/KometTeam/kolibri", tag = "dart-v0.1.3" }
+kolibri-net = { git = "https://github.com/KometTeam/kolibri", tag = "dart-v0.1.4" }
 tokio = { version = "1", features = ["rt-multi-thread"] }
 rmpv = "1"
 serde_json = "1"

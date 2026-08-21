@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- Handshake fields that are not set are now omitted from `sessionInit` instead
+  of being sent empty: `arch` (empty string), `buildNumber` (0), `instanceId`
+  (empty string) and `clientSessionId` (0). A web-type session can therefore
+  produce a payload byte-identical to the MAX web client, which sends none of
+  them. Mobile sessions pass real values and are unaffected.
+
 ## 0.1.3
 
 - `SessionOptions` gains `isPwa` and `headerUserAgent`. Both are optional: when
