@@ -30,6 +30,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             build_number: 6758,
             device_name: "Xiaomi 23127PN0CG".to_string(),
             device_locale: "ru".to_string(),
+            is_pwa: None,
+            header_user_agent: None,
         },
     };
 

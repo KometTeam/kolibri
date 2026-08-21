@@ -33,6 +33,10 @@ pub struct SessionOptions {
     pub insecure_tls: bool,
     /// proxy url `scheme://[user:pass@]host:port` (http/socks5/socks5h), or none
     pub proxy: Option<String>,
+    /// `isPwa` in the handshake userAgent; sent only when set
+    pub is_pwa: Option<bool>,
+    /// `headerUserAgent` in the handshake userAgent; sent only when set
+    pub header_user_agent: Option<String>,
 }
 
 /// sessionInit handshake result. `payload` is raw msgpack, `payload_json` the
@@ -179,6 +183,8 @@ impl KolibriSession {
             build_number: options.build_number,
             device_name: options.device_name,
             device_locale: options.device_locale,
+            is_pwa: options.is_pwa,
+            header_user_agent: options.header_user_agent,
         };
         let handshake = HandshakeConfig {
             instance_id: options.instance_id,

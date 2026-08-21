@@ -155,6 +155,8 @@ pub extern "C" fn kolibri_session_new(
         build_number: cfg.build_number,
         device_name: cstr(cfg.device_name),
         device_locale: cstr(cfg.device_locale),
+        is_pwa: None,
+        header_user_agent: None,
     };
     let handshake = HandshakeConfig {
         instance_id: cstr(cfg.instance_id),

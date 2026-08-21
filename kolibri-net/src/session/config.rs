@@ -17,6 +17,11 @@ pub struct UserAgent {
     pub build_number: i64,
     pub device_name: String,
     pub device_locale: String,
+    /// `isPwa` — отправляется только если задано. Веб-клиент MAX шлёт его с
+    /// августа 2026; сервер по нему решает, слать ли web push.
+    pub is_pwa: Option<bool>,
+    /// `headerUserAgent` — строка UA браузера, тоже только если задано.
+    pub header_user_agent: Option<String>,
 }
 
 impl UserAgent {

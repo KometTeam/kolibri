@@ -52,6 +52,8 @@ impl Session {
         auto_reconnect = true,
         insecure_tls = false,
         proxy = None,
+        is_pwa = None,
+        header_user_agent = None,
         on_wire = None
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -77,6 +79,8 @@ impl Session {
         auto_reconnect: bool,
         insecure_tls: bool,
         proxy: Option<String>,
+        is_pwa: Option<bool>,
+        header_user_agent: Option<String>,
         on_wire: Option<PyObject>,
     ) -> PyResult<Self> {
         let user_agent = UserAgent {
@@ -91,6 +95,8 @@ impl Session {
             build_number,
             device_name: device_name.to_string(),
             device_locale: device_locale.to_string(),
+            is_pwa,
+            header_user_agent,
         };
         let handshake = HandshakeConfig {
             instance_id: instance_id.to_string(),
@@ -375,6 +381,8 @@ impl AsyncSession {
         auto_reconnect = true,
         insecure_tls = false,
         proxy = None,
+        is_pwa = None,
+        header_user_agent = None,
         on_wire = None
     ))]
     #[allow(clippy::too_many_arguments)]
@@ -400,6 +408,8 @@ impl AsyncSession {
         auto_reconnect: bool,
         insecure_tls: bool,
         proxy: Option<String>,
+        is_pwa: Option<bool>,
+        header_user_agent: Option<String>,
         on_wire: Option<PyObject>,
     ) -> PyResult<Self> {
         let user_agent = UserAgent {
@@ -414,6 +424,8 @@ impl AsyncSession {
             build_number,
             device_name: device_name.to_string(),
             device_locale: device_locale.to_string(),
+            is_pwa,
+            header_user_agent,
         };
         let handshake = HandshakeConfig {
             instance_id: instance_id.to_string(),

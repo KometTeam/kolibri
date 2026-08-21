@@ -90,6 +90,8 @@ fn handshake_config() -> HandshakeConfig {
             build_number: 100,
             device_name: "Pixel".to_string(),
             device_locale: "ru".to_string(),
+            is_pwa: None,
+            header_user_agent: None,
         },
     }
 }

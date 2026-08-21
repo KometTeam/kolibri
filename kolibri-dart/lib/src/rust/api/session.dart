@@ -246,6 +246,12 @@ class SessionOptions {
   /// proxy url `scheme://[user:pass@]host:port` (http/socks5/socks5h), or none
   final String? proxy;
 
+  /// `isPwa` in the handshake userAgent; sent only when set
+  final bool? isPwa;
+
+  /// `headerUserAgent` in the handshake userAgent; sent only when set
+  final String? headerUserAgent;
+
   const SessionOptions({
     required this.host,
     required this.port,
@@ -268,6 +274,8 @@ class SessionOptions {
     required this.autoReconnect,
     required this.insecureTls,
     this.proxy,
+    this.isPwa,
+    this.headerUserAgent,
   });
 
   @override
@@ -292,7 +300,9 @@ class SessionOptions {
       pingInteractive.hashCode ^
       autoReconnect.hashCode ^
       insecureTls.hashCode ^
-      proxy.hashCode;
+      proxy.hashCode ^
+      isPwa.hashCode ^
+      headerUserAgent.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -319,7 +329,9 @@ class SessionOptions {
           pingInteractive == other.pingInteractive &&
           autoReconnect == other.autoReconnect &&
           insecureTls == other.insecureTls &&
-          proxy == other.proxy;
+          proxy == other.proxy &&
+          isPwa == other.isPwa &&
+          headerUserAgent == other.headerUserAgent;
 }
 
 @freezed

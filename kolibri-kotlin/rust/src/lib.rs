@@ -149,6 +149,8 @@ pub extern "system" fn Java_ru_kolibri_Native_sessionNew<'local>(
     locale: JString<'local>,
     device_name: JString<'local>,
     device_locale: JString<'local>,
+    is_pwa: None,
+    header_user_agent: None,
     client_session_id: jlong,
     ping_interval_secs: jlong,
     ping_interactive: jboolean,
@@ -180,6 +182,8 @@ pub extern "system" fn Java_ru_kolibri_Native_sessionNew<'local>(
         build_number,
         device_name: jstr(&mut env, &device_name),
         device_locale: jstr(&mut env, &device_locale),
+        is_pwa: None,
+        header_user_agent: None,
     };
     let handshake = HandshakeConfig {
         instance_id: jstr(&mut env, &instance_id),

@@ -1406,6 +1406,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
   CallParams dco_decode_box_autoadd_call_params(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_call_params(raw);
@@ -1541,6 +1547,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_bool(raw);
+  }
+
+  @protected
   CallParams? dco_decode_opt_box_autoadd_call_params(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_call_params(raw);
@@ -1590,8 +1602,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SessionOptions dco_decode_session_options(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 21)
-      throw Exception('unexpected arr length: expect 21 but see ${arr.length}');
+    if (arr.length != 23)
+      throw Exception('unexpected arr length: expect 23 but see ${arr.length}');
     return SessionOptions(
       host: dco_decode_String(arr[0]),
       port: dco_decode_u_16(arr[1]),
@@ -1614,6 +1626,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       autoReconnect: dco_decode_bool(arr[18]),
       insecureTls: dco_decode_bool(arr[19]),
       proxy: dco_decode_opt_String(arr[20]),
+      isPwa: dco_decode_opt_box_autoadd_bool(arr[21]),
+      headerUserAgent: dco_decode_opt_String(arr[22]),
     );
   }
 
@@ -1810,6 +1824,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_bool(deserializer));
+  }
+
+  @protected
   CallParams sse_decode_box_autoadd_call_params(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_call_params(deserializer));
@@ -1976,6 +1996,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_bool(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   CallParams? sse_decode_opt_box_autoadd_call_params(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2060,6 +2091,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_autoReconnect = sse_decode_bool(deserializer);
     var var_insecureTls = sse_decode_bool(deserializer);
     var var_proxy = sse_decode_opt_String(deserializer);
+    var var_isPwa = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_headerUserAgent = sse_decode_opt_String(deserializer);
     return SessionOptions(
         host: var_host,
         port: var_port,
@@ -2081,7 +2114,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         pingInteractive: var_pingInteractive,
         autoReconnect: var_autoReconnect,
         insecureTls: var_insecureTls,
-        proxy: var_proxy);
+        proxy: var_proxy,
+        isPwa: var_isPwa,
+        headerUserAgent: var_headerUserAgent);
   }
 
   @protected
@@ -2313,6 +2348,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_call_params(
       CallParams self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2455,6 +2496,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_bool(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_call_params(
       CallParams? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -2531,6 +2582,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.autoReconnect, serializer);
     sse_encode_bool(self.insecureTls, serializer);
     sse_encode_opt_String(self.proxy, serializer);
+    sse_encode_opt_box_autoadd_bool(self.isPwa, serializer);
+    sse_encode_opt_String(self.headerUserAgent, serializer);
   }
 
   @protected

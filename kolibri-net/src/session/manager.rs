@@ -310,7 +310,7 @@ fn reconnect_delay(attempt: u32) -> Duration {
 
 fn build_handshake_payload(cfg: &HandshakeConfig) -> Vec<u8> {
     let ua = &cfg.user_agent;
-    let user_agent = Value::Map(vec![
+    let mut user_agent_fields = vec![
         (
             Value::from("deviceType"),
             Value::from(ua.device_type.clone()),
@@ -337,7 +337,17 @@ fn build_handshake_payload(cfg: &HandshakeConfig) -> Vec<u8> {
             Value::from("deviceLocale"),
             Value::from(ua.device_locale.clone()),
         ),
-    ]);
+    ];
+    if let Some(header_user_agent) = &ua.header_user_agent {
+        user_agent_fields.push((
+            Value::from("headerUserAgent"),
+            Value::from(header_user_agent.clone()),
+        ));
+    }
+    if let Some(is_pwa) = ua.is_pwa {
+        user_agent_fields.push((Value::from("isPwa"), Value::from(is_pwa)));
+    }
+    let user_agent = Value::Map(user_agent_fields);
     let payload = Value::Map(vec![
         (
             Value::from("mt_instanceid"),
