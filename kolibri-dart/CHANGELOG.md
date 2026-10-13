@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5
+
+- Disposing a `KolibriSession` or `CallSignaling` no longer blocks the calling
+  thread. Their tokio runtime used to wait for every `spawn_blocking` task on
+  drop, including a `getaddrinfo` stuck on a network that swallows DNS, so
+  releasing the last handle from the UI isolate froze the app for the whole
+  resolver timeout. The runtime now shuts down in the background.
+
 ## 0.1.4
 
 - Handshake fields that are not set are now omitted from `sessionInit` instead

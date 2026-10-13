@@ -2,12 +2,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::frb_generated::StreamSink;
+use crate::runtime::BackgroundRuntime;
 use flutter_rust_bridge::frb;
 use kolibri_net::{
     ClientConfig, Direction, HandshakeConfig, Packet, ProxyConfig, Session, SessionConfig,
     SessionState, UserAgent, WireTap,
 };
-use tokio::runtime::Runtime;
 
 /// device + connection options. device fields feed the sessionInit handshake.
 pub struct SessionOptions {
@@ -158,7 +158,7 @@ where
 
 /// frb runs the blocking methods on a worker thread, so dart sees Futures
 pub struct KolibriSession {
-    rt: Arc<Runtime>,
+    rt: Arc<BackgroundRuntime>,
     inner: Arc<Session>,
     proxy: Option<ProxyConfig>,
 }
@@ -204,12 +204,7 @@ impl KolibriSession {
         config.ping_interactive = options.ping_interactive;
         config.auto_reconnect = options.auto_reconnect;
 
-        let rt = Arc::new(
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .map_err(|e| e.to_string())?,
-        );
+        let rt = Arc::new(BackgroundRuntime::new()?);
         let tap: Option<WireTap> = wire_log.map(|sink| {
             let tap: WireTap = Arc::new(move |dir, cmd, opcode, seq, payload| {
                 let _ = sink.add(WireLogEvent {

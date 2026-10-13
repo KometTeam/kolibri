@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
-use tokio::runtime::Runtime;
 
 use crate::frb_generated::StreamSink;
+use crate::runtime::BackgroundRuntime;
 
 pub struct IceServer {
     pub urls: Vec<String>,
@@ -57,7 +57,7 @@ pub fn decode_vcp(vcp: String, conversation_id: String) -> Option<CallParams> {
 /// ws2 call-signaling client. command results and notifications cross as JSON
 /// strings, decode with dart:convert.
 pub struct CallSignaling {
-    rt: Arc<Runtime>,
+    rt: Arc<BackgroundRuntime>,
     inner: Arc<kolibri_net::calls::Ws2Signaling>,
 }
 
@@ -66,12 +66,7 @@ pub fn connect_call_signaling(
     user_agent: Option<String>,
     proxy: Option<String>,
 ) -> Result<CallSignaling, String> {
-    let rt = Arc::new(
-        tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .map_err(|e| e.to_string())?,
-    );
+    let rt = Arc::new(BackgroundRuntime::new()?);
     let proxy = match proxy {
         Some(url) => Some(kolibri_net::ProxyConfig::parse(&url)?),
         None => None,
