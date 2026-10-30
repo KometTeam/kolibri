@@ -1,6 +1,6 @@
 [package]
 name = "kolibri-net"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "Komet binary protocol core: packet codec, framing, compression, transport"
 license = "MIT OR Apache-2.0"

@@ -149,8 +149,6 @@ pub extern "system" fn Java_ru_kolibri_Native_sessionNew<'local>(
     locale: JString<'local>,
     device_name: JString<'local>,
     device_locale: JString<'local>,
-    is_pwa: None,
-    header_user_agent: None,
     client_session_id: jlong,
     ping_interval_secs: jlong,
     ping_interactive: jboolean,

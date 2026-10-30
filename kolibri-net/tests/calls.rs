@@ -129,6 +129,36 @@ async fn ws2_command_response_notification_and_ping() {
 }
 
 #[tokio::test]
+async fn ws2_notification_sent_on_connect_reaches_a_late_subscriber() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut ws = accept_async(stream).await.unwrap();
+        let notif = json!({"type": "notification", "notification": "connection"});
+        ws.send(Message::text(notif.to_string())).await.unwrap();
+        while ws.next().await.is_some() {}
+    });
+
+    let url = format!("ws://127.0.0.1:{}/ws2", addr.port());
+    let sig = Ws2Signaling::connect(&url, None).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let mut first = sig.notifications();
+    let notif = timeout(Duration::from_secs(2), first.recv())
+        .await
+        .expect("the connection notification was dropped")
+        .expect("notif channel closed");
+    assert_eq!(notif["notification"], "connection");
+
+    let mut later = sig.notifications();
+    assert!(
+        later.try_recv().is_err(),
+        "only the first subscriber replays the start of the session"
+    );
+}
+
+#[tokio::test]
 async fn ws2_transmit_sdp_shape() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();

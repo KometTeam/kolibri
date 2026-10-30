@@ -52,6 +52,10 @@ pub struct Ws2Signaling {
     write_tx: mpsc::UnboundedSender<String>,
     pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>>,
     notif_tx: broadcast::Sender<Value>,
+    /// Subscribed before the reader starts, for the first [`Self::notifications`]
+    /// call: the server sends `connection` right after the handshake, before any
+    /// caller could subscribe, and a broadcast channel drops what nobody holds.
+    first_notifications: Mutex<Option<broadcast::Receiver<Value>>>,
     connected_tx: watch::Sender<bool>,
     tasks: Vec<JoinHandle<()>>,
 }
@@ -94,7 +98,7 @@ impl Ws2Signaling {
         let (mut write, mut read) = ws.split();
 
         let (write_tx, mut write_rx) = mpsc::unbounded_channel::<String>();
-        let (notif_tx, _) = broadcast::channel(NOTIF_CAPACITY);
+        let (notif_tx, first_notifications) = broadcast::channel(NOTIF_CAPACITY);
         let (connected_tx, _) = watch::channel(true);
         let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Value>>>> =
             Arc::new(Mutex::new(HashMap::new()));
@@ -132,14 +136,21 @@ impl Ws2Signaling {
             write_tx,
             pending,
             notif_tx,
+            first_notifications: Mutex::new(Some(first_notifications)),
             connected_tx,
             tasks: vec![writer, reader],
         })
     }
 
     /// server notifications (`type == "notification"`); filter on `notification`.
+    /// The first receiver starts at the handshake, so it also gets what the
+    /// server sent before anyone subscribed; later ones start when they subscribe.
     pub fn notifications(&self) -> broadcast::Receiver<Value> {
-        self.notif_tx.subscribe()
+        self.first_notifications
+            .lock()
+            .unwrap()
+            .take()
+            .unwrap_or_else(|| self.notif_tx.subscribe())
     }
 
     pub fn is_connected(&self) -> bool {

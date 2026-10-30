@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use flutter_rust_bridge::frb;
+use tokio::sync::broadcast::error::RecvError;
 
 use crate::frb_generated::StreamSink;
 use crate::runtime::BackgroundRuntime;
@@ -137,9 +138,15 @@ impl CallSignaling {
     pub fn notifications(&self, sink: StreamSink<String>) {
         let mut rx = self.inner.notifications();
         self.rt.spawn(async move {
-            while let Ok(value) = rx.recv().await {
-                if sink.add(value.to_string()).is_err() {
-                    break;
+            loop {
+                match rx.recv().await {
+                    Ok(value) => {
+                        if sink.add(value.to_string()).is_err() {
+                            break;
+                        }
+                    }
+                    Err(RecvError::Lagged(_)) => continue,
+                    Err(RecvError::Closed) => break,
                 }
             }
         });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.7
+
+- `CallSignaling.notifications()` no longer misses what the server sends right
+  after the handshake. The reader routed notifications into a broadcast channel
+  before anyone subscribed, so the `connection` notification that starts every
+  call was often dropped and the call stayed silent until something poked the
+  server. The first subscriber now gets everything since the handshake.
+- The notification stream no longer ends when the Dart side falls behind; it
+  skips what it missed and keeps going.
+
 ## 0.1.6
 
 - Connects on networks with broken, filtering or hijacked DNS. Every connect
