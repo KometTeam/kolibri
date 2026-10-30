@@ -2,14 +2,18 @@
 //! broadcast stream of server pushes. tokio + rustls over the protocol codec.
 
 mod client;
+pub(crate) mod dial;
 mod dispatcher;
+mod doh;
 mod error;
 pub(crate) mod proxy;
+mod resolve;
 pub(crate) mod tls;
 mod wiretap;
 
 pub use client::{Client, ClientConfig};
 pub use error::TransportError;
 pub use proxy::{ProxyConfig, ProxyKind};
+pub use resolve::set_dns_cache_path;
 pub use tls::{set_trust_mincifry_ca, trust_mincifry_ca};
 pub use wiretap::{Direction, WireTap};

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.6
+
+- Connects on networks with broken, filtering or hijacked DNS. Every connect
+  (session socket, media uploads, call signaling) now resolves through the
+  system resolver with a timeout of its own, ignores sinkhole answers
+  (`0.0.0.0`, `::`, loopback for a public name), falls back to the addresses
+  that worked last, and as a last resort asks DNS-over-HTTPS resolvers dialed
+  by IP (Yandex, Google, Cloudflare).
+- A host's addresses are raced (Happy Eyeballs, RFC 8305) instead of tried one
+  after another, with the TLS handshake inside each attempt: one address that
+  drops packets or presents a foreign certificate no longer fails the connect.
+- New `setDnsCachePath(path: …)` keeps the addresses that worked in a file, so
+  they survive restarts. Call it once at startup, before the first connect;
+  without it they are kept in memory only.
+- `connect_timeout` now covers resolution, TCP and the TLS handshake together;
+  the handshake used to get a second timeout of its own.
+
 ## 0.1.5
 
 - Disposing a `KolibriSession` or `CallSignaling` no longer blocks the calling

@@ -6,7 +6,7 @@ package ru.kolibri
  */
 class KolibriException(message: String) : RuntimeException(message)
 
-/** Process-wide TLS trust policy for the kolibri core. */
+/** Process-wide TLS trust and DNS policy for the kolibri core. */
 object Kolibri {
     /** Trust the bundled Минцифры CA (socket, media, calls); off by default, set at startup. */
     fun setTrustMincifryCa(enabled: Boolean) {
@@ -17,6 +17,17 @@ object Kolibri {
     fun trustMincifryCa(): Boolean {
         Native.ensureLoaded()
         return Native.trustMincifryCa()
+    }
+
+    /**
+     * Keep the addresses that worked (socket, media, calls) in [path] across restarts, so a
+     * client that connected once still connects while the network's DNS is broken; null keeps
+     * them in memory only. Set once at startup, before the first connect, e.g. to
+     * `File(context.filesDir, "kolibri_dns").path`.
+     */
+    fun setDnsCachePath(path: String?) {
+        Native.ensureLoaded()
+        Native.setDnsCachePath(path)
     }
 }
 

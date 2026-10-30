@@ -1,9 +1,12 @@
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::TcpStream;
+use tokio_rustls::client::TlsStream;
 
 use super::{MediaError, ProgressFn};
-use crate::transport::proxy::{connect_tcp, ProxyConfig};
+use crate::transport::dial::{connect_tcp, connect_tls};
+use crate::transport::proxy::ProxyConfig;
 use crate::transport::tls::build_connector;
 
 pub(crate) struct ParsedUrl {
@@ -65,18 +68,12 @@ pub(crate) async fn request(
     progress_total: u64,
 ) -> Result<HttpResponse, MediaError> {
     let head = build_head(method, &url.path, headers);
-    let tcp = connect_tcp(&url.host, url.port, timeout, proxy).await?;
 
     if url.https {
-        let connector = build_connector(insecure).map_err(|e| MediaError::Tls(e.to_string()))?;
-        let name = rustls::pki_types::ServerName::try_from(url.host.clone())
-            .map_err(|e| MediaError::Tls(e.to_string()))?;
-        let tls = connector
-            .connect(name, tcp)
-            .await
-            .map_err(|e| MediaError::Tls(e.to_string()))?;
+        let tls = connect_https(url, insecure, proxy, timeout).await?;
         exchange(tls, &head, body, timeout, progress, progress_total).await
     } else {
+        let tcp = connect_tcp(&url.host, url.port, timeout, proxy).await?;
         exchange(tcp, &head, body, timeout, progress, progress_total).await
     }
 }
@@ -100,16 +97,9 @@ pub(crate) async fn request_streaming<R: AsyncReadExt + Unpin>(
     progress_total: u64,
 ) -> Result<HttpResponse, MediaError> {
     let head = build_head(method, &url.path, headers);
-    let tcp = connect_tcp(&url.host, url.port, timeout, proxy).await?;
 
     if url.https {
-        let connector = build_connector(insecure).map_err(|e| MediaError::Tls(e.to_string()))?;
-        let name = rustls::pki_types::ServerName::try_from(url.host.clone())
-            .map_err(|e| MediaError::Tls(e.to_string()))?;
-        let tls = connector
-            .connect(name, tcp)
-            .await
-            .map_err(|e| MediaError::Tls(e.to_string()))?;
+        let tls = connect_https(url, insecure, proxy, timeout).await?;
         exchange_streaming(
             tls,
             &head,
@@ -123,6 +113,7 @@ pub(crate) async fn request_streaming<R: AsyncReadExt + Unpin>(
         )
         .await
     } else {
+        let tcp = connect_tcp(&url.host, url.port, timeout, proxy).await?;
         exchange_streaming(
             tcp,
             &head,
@@ -136,6 +127,18 @@ pub(crate) async fn request_streaming<R: AsyncReadExt + Unpin>(
         )
         .await
     }
+}
+
+async fn connect_https(
+    url: &ParsedUrl,
+    insecure: bool,
+    proxy: Option<&ProxyConfig>,
+    timeout: Duration,
+) -> Result<TlsStream<TcpStream>, MediaError> {
+    let connector = build_connector(insecure).map_err(|e| MediaError::Tls(e.to_string()))?;
+    let name = rustls::pki_types::ServerName::try_from(url.host.clone())
+        .map_err(|e| MediaError::Tls(e.to_string()))?;
+    Ok(connect_tls(&url.host, url.port, timeout, proxy, &connector, name).await?)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -228,7 +231,7 @@ async fn exchange<S: AsyncReadExt + AsyncWriteExt + Unpin>(
     read_response(&mut stream, timeout).await
 }
 
-async fn read_response<S: AsyncReadExt + Unpin>(
+pub(crate) async fn read_response<S: AsyncReadExt + Unpin>(
     stream: &mut S,
     timeout: Duration,
 ) -> Result<HttpResponse, MediaError> {

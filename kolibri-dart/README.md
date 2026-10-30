@@ -14,6 +14,9 @@ built-in helpers, as plain Dart `Map`s.
 - **Call signaling** over WebSocket, with an anti-spoof device fingerprint.
 - **Bundled Минцифры root** behind `setTrustMincifryCa(enabled: true)`, for hosts
   that chain to Russian Trusted Root/Sub CA. Off by default.
+- **Connects when DNS is broken**: addresses are raced, the ones that worked are
+  remembered, sinkhole answers are ignored, DNS-over-HTTPS as the last resort.
+  `setDnsCachePath(path: …)` keeps the remembered addresses across restarts.
 - **All native platforms** — Android, iOS, macOS, Linux, Windows.
 
 ## Requirements

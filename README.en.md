@@ -43,6 +43,9 @@ live in the core, so every binding gets them for free.
   uploads, and ws2 calls.
 - **Минцифры CA** — bundled Russian Trusted Root/Sub CA behind a flag, to reach
   `api2.oneme.ru` (the only such host so far) without installing it into the OS.
+- **Connecting when DNS is broken** — a host's addresses are raced, the ones that
+  worked are remembered (across restarts too), sinkhole answers of blocking DNS
+  are ignored, DNS-over-HTTPS as the last resort.
 
 ## Quick start
 
@@ -164,6 +167,41 @@ untouched, and other libraries in the process (their own `requests`/OpenSSL, etc
 don't see this root. Wrappers: `kolibri.set_trust_mincifry_ca(bool)` (Python),
 `Kolibri.setTrustMincifryCa(bool)` (Kotlin), `kolibri.SetTrustMincifryCA(bool)` (Go),
 `kolibri_set_trust_mincifry_ca(bool)` (C ABI / Swift), `setTrustMincifryCa(bool)` (Dart).
+
+## Connecting when DNS is broken
+
+All three paths (main socket, media CDN, ws2 calls) connect the same way:
+
+1. **Resolve.** The system resolver first. Answers that lead nowhere — `0.0.0.0`,
+   `::`, loopback for a public name — are how blocking DNS (AdGuard, NextDNS,
+   Pi-hole) refuses a name; they count as no answer. With addresses that worked
+   already cached, the system resolver gets 1.5 s, otherwise 5 s.
+2. **Cache.** Addresses a connect succeeded through are remembered: the winner
+   goes first, cached addresses DNS no longer returns go last. While DNS is down,
+   connects go through them.
+3. **Race (Happy Eyeballs, RFC 8305).** The first address starts at once, the next
+   one after 250 ms or as soon as the previous one fails; the first success wins,
+   the rest are closed. For TLS the handshake is part of the attempt: an address
+   that accepts TCP but presents someone else's certificate (a stale cache entry,
+   a hijacked answer) loses and is struck from the cache. An address that drops
+   packets no longer eats the whole timeout: TCP to one address waits 5 s at most.
+4. **DoH.** If DNS and the cache come up empty, or none of their addresses worked:
+   DNS-over-HTTPS (RFC 8484) to Yandex `77.88.8.8`, Google `8.8.8.8`, Cloudflare
+   `1.1.1.1`, dialed by IP, so the fallback itself needs no DNS. A records only.
+
+`connect_timeout` (15 s by default) covers it all: resolution, TCP and TLS. Through
+a proxy the proxy resolves the host and there is no race.
+
+The cache is process-wide and in memory by default. To keep it across restarts,
+name a file in the app's private data once at startup, before the first connect:
+
+```rust
+kolibri_net::set_dns_cache_path(Some(data_dir.join("kolibri_dns")));
+```
+
+Wrappers: `kolibri.set_dns_cache_path(path)` (Python), `Kolibri.setDnsCachePath(path)`
+(Kotlin), `kolibri.SetDNSCachePath(path)` (Go), `kolibri_set_dns_cache_path(path)`
+(C ABI / Swift), `setDnsCachePath(path: …)` (Dart).
 
 ## Traffic logging
 

@@ -14,7 +14,8 @@ use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::Connector;
 
 use super::CallError;
-use crate::transport::proxy::{connect_tcp, ProxyConfig};
+use crate::transport::dial::connect_tcp;
+use crate::transport::proxy::ProxyConfig;
 use crate::transport::tls::build_client_config;
 
 const NOTIF_CAPACITY: usize = 256;

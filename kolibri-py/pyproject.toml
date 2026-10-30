@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "kolibri-py"
-version = "0.1.2"
+version = "0.1.3"
 description = "Python bindings for the Komet messaging protocol"
 readme = "README.md"
 license = "MIT OR Apache-2.0"

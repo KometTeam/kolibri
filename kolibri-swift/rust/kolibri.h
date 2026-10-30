@@ -57,6 +57,10 @@ void kolibri_string_free(char *s);
 void kolibri_set_trust_mincifry_ca(bool enabled);
 bool kolibri_trust_mincifry_ca(void);
 
+/* Keep the addresses that worked in `path` across restarts, so a client that connected once
+ * still connects while DNS is broken; NULL or "" keeps them in memory only. Set at startup. */
+void kolibri_set_dns_cache_path(const char *path);
+
 char *kolibri_session_new(const KConfig *cfg, KWireCb wire_cb, void *wire_user,
                           KSession **out);
 char *kolibri_session_connect(KSession *h, KBytes *out);

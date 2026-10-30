@@ -123,6 +123,14 @@ pub extern "C" fn kolibri_trust_mincifry_ca() -> bool {
     kolibri_net::trust_mincifry_ca()
 }
 
+/// Keep the addresses that worked (socket, media, calls) in `path` across restarts, so a client
+/// that connected once still connects while the network's DNS is broken; NULL or "" keeps them
+/// in memory only. Set once at startup, before the first connect.
+#[no_mangle]
+pub extern "C" fn kolibri_set_dns_cache_path(path: *const c_char) {
+    kolibri_net::set_dns_cache_path(opt_str(path).map(std::path::PathBuf::from));
+}
+
 #[no_mangle]
 pub extern "C" fn kolibri_session_new(
     cfg: *const KConfig,

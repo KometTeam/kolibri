@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/calls.dart';
+import 'api/dns.dart';
 import 'api/session.dart';
 import 'api/tls.dart';
 import 'dart:async';

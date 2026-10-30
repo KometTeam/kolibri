@@ -1327,6 +1327,15 @@ fn trust_mincifry_ca() -> bool {
     kolibri_net::trust_mincifry_ca()
 }
 
+/// Keep the addresses that worked (socket, media, calls) in `path` across restarts, so a client
+/// that connected once still connects while the network's DNS is broken; None keeps them in
+/// memory only. Set once at startup, before the first connect.
+#[pyfunction]
+#[pyo3(signature = (path = None))]
+fn set_dns_cache_path(path: Option<std::path::PathBuf>) {
+    kolibri_net::set_dns_cache_path(path);
+}
+
 #[pyfunction]
 #[pyo3(signature = (notification, my_user_id = None))]
 fn parse_connection(
@@ -1394,6 +1403,7 @@ fn kolibri(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decode_vcp, m)?)?;
     m.add_function(wrap_pyfunction!(set_trust_mincifry_ca, m)?)?;
     m.add_function(wrap_pyfunction!(trust_mincifry_ca, m)?)?;
+    m.add_function(wrap_pyfunction!(set_dns_cache_path, m)?)?;
     m.add_function(wrap_pyfunction!(parse_connection, m)?)?;
     m.add_function(wrap_pyfunction!(parse_transmitted_data, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

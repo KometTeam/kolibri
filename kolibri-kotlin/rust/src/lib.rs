@@ -560,6 +560,20 @@ pub extern "system" fn Java_ru_kolibri_Native_trustMincifryCa<'local>(
     }
 }
 
+/// Keep the addresses that worked (socket, media, calls) in `path` across restarts, so a client
+/// that connected once still connects while the network's DNS is broken; null or "" keeps them
+/// in memory only. Set once at startup, before the first connect.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub extern "system" fn Java_ru_kolibri_Native_setDnsCachePath<'local>(
+    mut env: JNIEnv<'local>,
+    _this: JObject<'local>,
+    path: JString<'local>,
+) {
+    let path = jstr_opt(&mut env, &path).map(std::path::PathBuf::from);
+    kolibri_net::set_dns_cache_path(path);
+}
+
 #[no_mangle]
 #[allow(non_snake_case)]
 pub extern "system" fn Java_ru_kolibri_Native_sessionUserAgent<'local>(

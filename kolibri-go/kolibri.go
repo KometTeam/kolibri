@@ -361,6 +361,16 @@ func SetTrustMincifryCA(enabled bool) { C.kolibri_set_trust_mincifry_ca(C.bool(e
 // TrustMincifryCA reports whether the bundled Минцифры CA is currently trusted.
 func TrustMincifryCA() bool { return bool(C.kolibri_trust_mincifry_ca()) }
 
+// SetDNSCachePath keeps the addresses that worked (main socket, media uploads,
+// ws2 calls) in the file at path across restarts, so a client that connected
+// once still connects while the network's DNS is broken; "" keeps them in
+// memory only. Call once at startup, before opening sessions/uploads/calls.
+func SetDNSCachePath(path string) {
+	cpath := C.CString(path)
+	defer C.free(unsafe.Pointer(cpath))
+	C.kolibri_set_dns_cache_path(cpath)
+}
+
 // PingInteractive reports the current keepalive interactive flag.
 func (s *Session) PingInteractive() bool { return bool(C.kolibri_session_ping_interactive(s.ptr)) }
 

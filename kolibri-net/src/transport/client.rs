@@ -7,9 +7,10 @@ use tokio::sync::{broadcast, mpsc, watch};
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 
+use super::dial::{connect_tls, DialError};
 use super::dispatcher::Dispatcher;
 use super::error::TransportError;
-use super::proxy::{connect_tcp, ProxyConfig};
+use super::proxy::ProxyConfig;
 use super::tls::build_connector;
 use super::wiretap::{Direction, WireTap};
 use crate::protocol::codec;
@@ -26,6 +27,7 @@ pub struct ClientConfig {
     pub port: u16,
     /// accept any TLS cert, debug only
     pub insecure_tls: bool,
+    /// covers resolution, TCP and the TLS handshake together
     pub connect_timeout: Duration,
     pub request_timeout: Duration,
     /// route the connection through a proxy (HTTP CONNECT or SOCKS5)
@@ -78,26 +80,23 @@ impl Client {
         tap: Option<WireTap>,
     ) -> Result<Self, TransportError> {
         let connector = build_connector(config.insecure_tls)?;
+        let server_name = rustls::pki_types::ServerName::try_from(config.host.clone())
+            .map_err(|e| TransportError::Config(format!("invalid server name: {e}")))?;
 
-        let tcp = connect_tcp(
+        let tls = connect_tls(
             &config.host,
             config.port,
             config.connect_timeout,
             config.proxy.as_ref(),
+            &connector,
+            server_name,
         )
         .await
-        .map_err(|e| match e.kind() {
-            std::io::ErrorKind::TimedOut => TransportError::ConnectTimeout,
-            _ => TransportError::Io(e),
+        .map_err(|e| match e {
+            DialError::TimedOut => TransportError::ConnectTimeout,
+            DialError::Io(e) => TransportError::Io(e),
+            DialError::Tls(e) => TransportError::Tls(e.to_string()),
         })?;
-
-        let server_name = rustls::pki_types::ServerName::try_from(config.host.clone())
-            .map_err(|e| TransportError::Config(format!("invalid server name: {e}")))?;
-
-        let tls = timeout(config.connect_timeout, connector.connect(server_name, tcp))
-            .await
-            .map_err(|_| TransportError::ConnectTimeout)?
-            .map_err(|e| TransportError::Tls(e.to_string()))?;
 
         let (mut read_half, mut write_half) = tokio::io::split(tls);
 

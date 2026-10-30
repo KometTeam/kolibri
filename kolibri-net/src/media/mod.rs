@@ -3,11 +3,13 @@
 //! resumable parallel-chunk video. Control plane (upload URL, send message) stays
 //! on the main protocol socket via [`crate::transport`].
 
-mod http;
+pub(crate) mod http;
 mod upload;
 
 use std::sync::Arc;
 use thiserror::Error;
+
+use crate::transport::dial::DialError;
 
 pub use http::HttpResponse;
 pub use upload::{
@@ -32,4 +34,14 @@ pub enum MediaError {
     Timeout,
     #[error("incomplete http response")]
     Incomplete,
+}
+
+impl From<DialError> for MediaError {
+    fn from(e: DialError) -> Self {
+        match e {
+            DialError::TimedOut => MediaError::Timeout,
+            DialError::Io(e) => MediaError::Io(e),
+            DialError::Tls(e) => MediaError::Tls(e.to_string()),
+        }
+    }
 }

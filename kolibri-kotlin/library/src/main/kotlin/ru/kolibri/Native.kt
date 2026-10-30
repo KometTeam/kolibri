@@ -57,6 +57,7 @@ internal object Native {
     external fun sessionNextPushJson(handle: Long, timeoutMs: Long, outOpcode: IntArray): String?
     external fun setTrustMincifryCa(enabled: Boolean)
     external fun trustMincifryCa(): Boolean
+    external fun setDnsCachePath(path: String?)
 
     external fun sessionState(handle: Long): Int
     external fun sessionPingInteractive(handle: Long): Boolean

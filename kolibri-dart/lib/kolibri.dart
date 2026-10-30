@@ -24,6 +24,8 @@ export 'src/rust/api/session.dart'
 
 export 'src/rust/api/tls.dart' show setTrustMincifryCa, trustMincifryCa;
 
+export 'src/rust/api/dns.dart' show setDnsCachePath;
+
 export 'src/rust/api/calls.dart'
     show
         CallSignaling,

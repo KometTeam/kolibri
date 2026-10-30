@@ -108,6 +108,21 @@ async fn request_response_roundtrip() {
 }
 
 #[tokio::test]
+async fn connects_by_host_name() {
+    let acceptor = TlsAcceptor::from(server_config());
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(run_server(listener, acceptor));
+
+    let client = Client::connect(ClientConfig::new("localhost", port).insecure(true))
+        .await
+        .unwrap();
+    let payload = msgpack_map(&[("a", "b")]);
+    let resp = client.request(opcodes::MSG_SEND, &payload).await.unwrap();
+    assert_eq!(resp.payload, payload);
+}
+
+#[tokio::test]
 async fn large_payload_compresses_and_roundtrips() {
     let client = start().await;
     // A repetitive >32 byte value triggers LZ4-frame compression on both sides.

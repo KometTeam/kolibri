@@ -6,11 +6,9 @@
 //!   connect command carrying the target as a domain (proxy resolves it).
 
 use std::io;
-use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
-use tokio::time::timeout;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProxyKind {
@@ -68,41 +66,17 @@ impl ProxyConfig {
     }
 }
 
-/// Open a TCP stream to `(target_host, target_port)`, directly or through
-/// `proxy`. `connect_timeout` covers the lot, proxy handshake included.
-pub async fn connect_tcp(
-    target_host: &str,
-    target_port: u16,
-    connect_timeout: Duration,
-    proxy: Option<&ProxyConfig>,
-) -> io::Result<TcpStream> {
-    timeout(connect_timeout, async {
-        match proxy {
-            None => {
-                let tcp = TcpStream::connect((target_host, target_port)).await?;
-                tcp.set_nodelay(true).ok();
-                Ok(tcp)
-            }
-            Some(p) => {
-                let mut tcp = TcpStream::connect((p.host.as_str(), p.port)).await?;
-                tcp.set_nodelay(true).ok();
-                match p.kind {
-                    ProxyKind::Http => http_connect(&mut tcp, target_host, target_port, p).await?,
-                    ProxyKind::Socks5 => {
-                        socks5_connect(&mut tcp, target_host, target_port, p).await?
-                    }
-                }
-                Ok(tcp)
-            }
-        }
-    })
-    .await
-    .unwrap_or_else(|_| {
-        Err(io::Error::new(
-            io::ErrorKind::TimedOut,
-            "proxy connect timed out",
-        ))
-    })
+/// Turn `stream`, connected to the proxy, into a tunnel to `(host, port)`.
+pub(crate) async fn handshake(
+    stream: &mut TcpStream,
+    host: &str,
+    port: u16,
+    proxy: &ProxyConfig,
+) -> io::Result<()> {
+    match proxy.kind {
+        ProxyKind::Http => http_connect(stream, host, port, proxy).await,
+        ProxyKind::Socks5 => socks5_connect(stream, host, port, proxy).await,
+    }
 }
 
 async fn http_connect(
